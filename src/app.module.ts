@@ -25,6 +25,9 @@ import * as https from 'https';
             agent: new https.Agent({ family: 4 }), // IPv6 타임아웃 에러 방지를 위해 강제로 IPv4 사용
           },
         },
+        launchOptions: {
+          dropPendingUpdates: true,
+        },
       }),
       inject: [ConfigService],
     }),

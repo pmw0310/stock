@@ -20,6 +20,6 @@ export class StockRankItem {
 /**
  * 국내주식 거래대금 상위 응답 DTO입니다.
  */
-export class GetStockRankResponseDto {
+export class Ka10032ResponseDto {
   trdePricaUpper: StockRankItem[];
 }

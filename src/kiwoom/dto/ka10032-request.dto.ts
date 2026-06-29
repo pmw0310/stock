@@ -3,7 +3,7 @@ import { IsString, IsNotEmpty } from 'class-validator';
 /**
  * 국내주식 거래대금 상위 요청 DTO입니다.
  */
-export class GetStockRankRequestDto {
+export class Ka10032RequestDto {
   /**
    * 시장구분 000:전체, 001:코스피, 101:코스닥
    */

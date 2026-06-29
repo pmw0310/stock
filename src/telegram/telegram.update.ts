@@ -1,15 +1,30 @@
-import { Update, Ctx, Start, Command, On, Message } from 'nestjs-telegraf';
+import { Update, Ctx, On, Message } from 'nestjs-telegraf';
 import { Context } from 'telegraf';
 import { ConfigService } from '@nestjs/config';
 import { Injectable } from '@nestjs/common';
+import { TelegramStateService } from '@/telegram/telegram-state.service';
+import { LoginCommand } from '@/telegram/commands/login.command';
+import { LoginRenewalCommand } from '@/telegram/commands/login-renewal.command';
+import { PowerOffCommand } from '@/telegram/commands/power-off.command';
+import { TelegramCommand } from '@/telegram/commands/command.interface';
 
 /**
- * 텔레그램 봇의 메시지 및 명령어를 처리하는 업데이트 클래스입니다.
+ * 텔레그램 봇의 메시지를 수신하여 권한을 확인한 뒤 각 명령어 처리기로 위임하는 업데이트 클래스입니다.
  */
 @Update()
 @Injectable()
 export class TelegramUpdate {
-  constructor(private readonly configService: ConfigService) {}
+  private readonly handlers: TelegramCommand[];
+
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly stateService: TelegramStateService,
+    private readonly loginCommand: LoginCommand,
+    private readonly loginRenewalCommand: LoginRenewalCommand,
+    private readonly powerOffCommand: PowerOffCommand,
+  ) {
+    this.handlers = [loginCommand, loginRenewalCommand, powerOffCommand];
+  }
 
   /**
    * 허용된 사용자(TELEGRAM_CHAT_ID)인지 확인합니다.
@@ -22,29 +37,7 @@ export class TelegramUpdate {
   };
 
   /**
-   * '/start' 명령어 입력 시 환영 메시지를 반환합니다.
-   * @param ctx - 텔레그램 컨텍스트
-   */
-  @Start()
-  async onStart(@Ctx() ctx: Context): Promise<void> {
-    if (!this.isAuthorized(ctx)) return;
-    await ctx.reply(
-      '안녕하세요! 주식 트레이딩 봇입니다. 명령어를 입력해주세요. (예: /ping)',
-    );
-  }
-
-  /**
-   * '/ping' 명령어 입력 시 'pong!'을 반환합니다.
-   * @param ctx - 텔레그램 컨텍스트
-   */
-  @Command('ping')
-  async onPing(@Ctx() ctx: Context): Promise<void> {
-    if (!this.isAuthorized(ctx)) return;
-    await ctx.reply('pong!');
-  }
-
-  /**
-   * 일반 텍스트 메시지를 수신하면 에코(echo) 형태로 반환합니다.
+   * 일반 텍스트 메시지를 수신하여 명령어 핸들러들에게 위임하여 처리합니다.
    * @param msg - 수신된 텍스트 메시지
    * @param ctx - 텔레그램 컨텍스트
    */
@@ -54,6 +47,30 @@ export class TelegramUpdate {
     @Ctx() ctx: Context,
   ): Promise<void> {
     if (!this.isAuthorized(ctx)) return;
-    await ctx.reply(`입력하신 메시지: ${msg}`);
+
+    const command = msg.trim().toLowerCase();
+
+    for (const handler of this.handlers) {
+      if (handler.canHandle(command)) {
+        await handler.handle(ctx, command);
+        return;
+      }
+    }
   }
+
+  /**
+   * 현재 저장된 접근 토큰을 반환합니다.
+   * @returns 접근 토큰 또는 null
+   */
+  getAccessToken = (): string | null => {
+    return this.stateService.getAccessToken();
+  };
+
+  /**
+   * 현재 설정된 투자 유형(실투자 여부)을 반환합니다.
+   * @returns 실투자 여부
+   */
+  getIsRealTrading = (): boolean => {
+    return this.stateService.getIsRealTrading();
+  };
 }

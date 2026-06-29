@@ -1,14 +1,16 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { KiwoomService } from '@/kiwoom/kiwoom.service';
+import { Au10001Service } from '@/kiwoom/au10001.service';
+import { Ka10032Service } from '@/kiwoom/ka10032.service';
 
 /**
  * 키움증권 Open API 모듈입니다.
- * 외부 통신을 위한 HttpModule과 비즈니스 로직인 KiwoomService를 포함합니다.
+ * 외부 통신을 위한 HttpModule과 각 TR(Transaction) 별 비즈니스 로직 서비스를 포함합니다.
  */
 @Module({
   imports: [HttpModule],
-  providers: [KiwoomService],
-  exports: [KiwoomService],
+  providers: [KiwoomService, Au10001Service, Ka10032Service],
+  exports: [KiwoomService, Au10001Service, Ka10032Service],
 })
 export class KiwoomModule {}

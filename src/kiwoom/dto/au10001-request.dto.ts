@@ -3,7 +3,7 @@ import { IsString, IsNotEmpty } from 'class-validator';
 /**
  * 키움증권 접근 토큰 발급 요청을 위한 DTO 클래스입니다.
  */
-export class GetTokenRequestDto {
+export class Au10001RequestDto {
   /**
    * 권한 부여 타입 (기본값: 'client_credentials')
    */
