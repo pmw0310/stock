@@ -1,6 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
-/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import {
   Injectable,
   NestInterceptor,
@@ -18,7 +15,9 @@ import { toCamelCase, toSnakeCase } from '@/common/utils/case-converter.util';
 @Injectable()
 export class SnakeToCamelInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    const request = context.switchToHttp().getRequest();
+    const request = context
+      .switchToHttp()
+      .getRequest<Record<string, unknown>>();
 
     // 요청 Body 변환 (스네이크 -> 카멜)
     if (request.body && Object.keys(request.body).length > 0) {
