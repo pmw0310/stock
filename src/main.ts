@@ -2,6 +2,7 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import helmet from 'helmet';
 import { AppModule } from '@/app.module';
+import { SnakeToCamelInterceptor } from '@/common/interceptors/snake-to-camel.interceptor';
 
 /**
  * NestJS 애플리케이션을 부트스트랩하여 실행합니다.
@@ -21,6 +22,9 @@ const bootstrap = async (): Promise<void> => {
       transform: true, // 데이터를 DTO 타입에 맞춰 자동으로 변환 (예: 문자열 "1" -> 숫자 1)
     }),
   );
+
+  // 전역 인터셉터 등록 (스네이크 케이스 <-> 카멜 케이스 변환)
+  app.useGlobalInterceptors(new SnakeToCamelInterceptor());
 
   await app.listen(process.env.PORT ?? 3000);
 };

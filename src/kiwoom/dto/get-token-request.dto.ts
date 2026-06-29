@@ -9,7 +9,7 @@ export class GetTokenRequestDto {
    */
   @IsString()
   @IsNotEmpty()
-  grant_type: string;
+  grantType: string;
 
   /**
    * 키움증권 API 앱 키

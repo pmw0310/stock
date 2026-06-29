@@ -9,14 +9,14 @@ export class GetTokenResponseDto {
    */
   @IsString()
   @IsNotEmpty()
-  expires_dt: string;
+  expiresDt: string;
 
   /**
    * 토큰 타입 (예: Bearer)
    */
   @IsString()
   @IsNotEmpty()
-  token_type: string;
+  tokenType: string;
 
   /**
    * 발급된 접근 토큰
