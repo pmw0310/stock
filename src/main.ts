@@ -1,3 +1,4 @@
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import helmet from 'helmet';
 import { AppModule } from '@/app.module';
@@ -12,7 +13,16 @@ const bootstrap = async (): Promise<void> => {
   // 보안을 위해 helmet 설정
   app.use(helmet());
 
+  // DTO 검증 및 자동 형변환을 위한 ValidationPipe 설정
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true, // DTO에 정의되지 않은 속성은 자동 제거
+      forbidNonWhitelisted: true, // DTO에 정의되지 않은 속성이 들어오면 요청 자체를 막음
+      transform: true, // 데이터를 DTO 타입에 맞춰 자동으로 변환 (예: 문자열 "1" -> 숫자 1)
+    }),
+  );
+
   await app.listen(process.env.PORT ?? 3000);
 };
 
-bootstrap();
+void bootstrap();

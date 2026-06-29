@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { HttpModule } from '@nestjs/axios';
 import { AppController } from '@/app.controller';
 import { AppService } from '@/app.service';
+import { KiwoomModule } from '@/kiwoom/kiwoom.module';
 
 /**
  * 애플리케이션의 루트 모듈입니다.
@@ -15,6 +16,7 @@ import { AppService } from '@/app.service';
       envFilePath: '.env',
     }),
     HttpModule,
+    KiwoomModule,
   ],
   controllers: [AppController],
   providers: [AppService],
