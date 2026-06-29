@@ -1,7 +1,10 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { HttpModule } from '@nestjs/axios';
 import { KiwoomModule } from '@/kiwoom/kiwoom.module';
+import { TelegrafModule } from 'nestjs-telegraf';
+import { TelegramModule } from '@/telegram/telegram.module';
+import * as https from 'https';
 
 /**
  * 애플리케이션의 루트 모듈입니다.
@@ -13,8 +16,21 @@ import { KiwoomModule } from '@/kiwoom/kiwoom.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    TelegrafModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: (configService: ConfigService) => ({
+        token: configService.get<string>('TELEGRAM_TOKEN') || '',
+        options: {
+          telegram: {
+            agent: new https.Agent({ family: 4 }), // IPv6 타임아웃 에러 방지를 위해 강제로 IPv4 사용
+          },
+        },
+      }),
+      inject: [ConfigService],
+    }),
     HttpModule,
     KiwoomModule,
+    TelegramModule,
   ],
   controllers: [],
   providers: [],
