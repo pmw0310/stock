@@ -6,6 +6,7 @@ import { TelegramStateService } from '@/telegram/telegram-state.service';
 import { LoginCommand } from '@/telegram/commands/login.command';
 import { LoginRenewalCommand } from '@/telegram/commands/login-renewal.command';
 import { PowerOffCommand } from '@/telegram/commands/power-off.command';
+import { SearchCommand } from '@/telegram/commands/search.command';
 import { TelegramCommand } from '@/telegram/commands/command.interface';
 
 /**
@@ -22,8 +23,14 @@ export class TelegramUpdate {
     private readonly loginCommand: LoginCommand,
     private readonly loginRenewalCommand: LoginRenewalCommand,
     private readonly powerOffCommand: PowerOffCommand,
+    private readonly searchCommand: SearchCommand,
   ) {
-    this.handlers = [loginCommand, loginRenewalCommand, powerOffCommand];
+    this.handlers = [
+      loginCommand,
+      loginRenewalCommand,
+      powerOffCommand,
+      searchCommand,
+    ];
   }
 
   /**

@@ -5,6 +5,7 @@ import { TelegramStateService } from '@/telegram/telegram-state.service';
 import { LoginCommand } from '@/telegram/commands/login.command';
 import { LoginRenewalCommand } from '@/telegram/commands/login-renewal.command';
 import { PowerOffCommand } from '@/telegram/commands/power-off.command';
+import { SearchCommand } from '@/telegram/commands/search.command';
 
 /**
  * 텔레그램 봇 관련 기능을 제공하는 모듈입니다.
@@ -17,6 +18,7 @@ import { PowerOffCommand } from '@/telegram/commands/power-off.command';
     LoginCommand,
     LoginRenewalCommand,
     PowerOffCommand,
+    SearchCommand,
   ],
 })
 export class TelegramModule {}

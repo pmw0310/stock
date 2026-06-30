@@ -1,4 +1,9 @@
-import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnApplicationBootstrap,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectBot } from 'nestjs-telegraf';
 import { Telegraf, Context } from 'telegraf';
@@ -8,7 +13,9 @@ import { Au10001Service } from '@/kiwoom/au10001.service';
  * 텔레그램 상태 및 토큰 자동 갱신 일정을 관리하는 서비스 클래스입니다.
  */
 @Injectable()
-export class TelegramStateService implements OnModuleDestroy {
+export class TelegramStateService
+  implements OnModuleDestroy, OnApplicationBootstrap
+{
   private readonly logger = new Logger(TelegramStateService.name);
 
   // 접근 토큰과 실투자 여부를 저장하는 상태
@@ -29,12 +36,59 @@ export class TelegramStateService implements OnModuleDestroy {
   /**
    * 모듈 소멸 시 등록된 타이머를 해제합니다.
    */
-  onModuleDestroy(): void {
+  onModuleDestroy = (): void => {
     if (this.renewalTimeout) {
       clearTimeout(this.renewalTimeout);
       this.renewalTimeout = null;
     }
-  }
+  };
+
+  /**
+   * 애플리케이션 시작 시 호출되어 시작 알림을 전송하고 모의투자 로그인을 자동으로 수행합니다.
+   */
+  onApplicationBootstrap = async (): Promise<void> => {
+    const chatId = this.configService.get<string>('TELEGRAM_CHAT_ID');
+    if (!chatId) {
+      this.logger.warn(
+        'TELEGRAM_CHAT_ID 설정이 없어 프로그램 시작 알림 및 자동 로그인을 건너뜁니다.',
+      );
+      return;
+    }
+
+    try {
+      this.logger.log(
+        '프로그램이 시작되었습니다. 모의투자 자동 로그인을 시도합니다...',
+      );
+      await this.bot.telegram.sendMessage(
+        chatId,
+        '🤖 프로그램이 시작되었습니다. 모의투자 자동 로그인을 시도합니다...',
+      );
+
+      const response = await this.au10001Service.issueAccessToken(false);
+
+      if (response.token) {
+        this.setLoginInfo(response.token, false);
+        this.logger.log('[성공] 모의투자 자동 로그인 완료.');
+        await this.bot.telegram.sendMessage(
+          chatId,
+          '✅ 모의투자 자동 로그인 성공!',
+        );
+
+        // 로그인 성공 시 자동 갱신 일정 예약
+        this.scheduleNextRenewal();
+      } else {
+        this.logger.warn('[실패] 모의투자 자동 로그인 실패. 토큰이 없습니다.');
+        await this.bot.telegram.sendMessage(
+          chatId,
+          '❌ 모의투자 자동 로그인 실패: 토큰이 발급되지 않았습니다.',
+        );
+      }
+    } catch (error: unknown) {
+      const errorMsg = `❌ 모의투자 자동 로그인 중 오류 발생: ${error instanceof Error ? error.message : String(error)}`;
+      this.logger.error(errorMsg, error instanceof Error ? error.stack : error);
+      await this.bot.telegram.sendMessage(chatId, errorMsg);
+    }
+  };
 
   /**
    * 로그인 정보(토큰 및 투자 유형)를 저장합니다.
