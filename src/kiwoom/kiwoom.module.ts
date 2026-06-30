@@ -5,6 +5,7 @@ import { Au10001Service } from '@/kiwoom/au10001.service';
 import { Ka10032Service } from '@/kiwoom/ka10032.service';
 import { Ka10001Service } from '@/kiwoom/ka10001.service';
 import { Kt10000Service } from '@/kiwoom/kt10000.service';
+import { Kt00004Service } from '@/kiwoom/kt00004.service';
 
 /**
  * 키움증권 Open API 모듈입니다.
@@ -18,6 +19,7 @@ import { Kt10000Service } from '@/kiwoom/kt10000.service';
     Ka10032Service,
     Ka10001Service,
     Kt10000Service,
+    Kt00004Service,
   ],
   exports: [
     KiwoomService,
@@ -25,6 +27,7 @@ import { Kt10000Service } from '@/kiwoom/kt10000.service';
     Ka10032Service,
     Ka10001Service,
     Kt10000Service,
+    Kt00004Service,
   ],
 })
 export class KiwoomModule {}
