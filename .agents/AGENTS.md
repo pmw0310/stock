@@ -12,7 +12,9 @@
 ## 2. 명명 및 파일 작성 규칙 (Naming & File Conventions)
 
 ### 2.1. 키움 API (Kiwoom Domain)
+
 모든 키움 관련 기능은 철저히 **TR 번호 기반**으로 분리하여 작성합니다.
+
 - **서비스 (Service)**: `src/kiwoom/` 하위에 위치
   - 파일명: `[TR번호(소문자)].service.ts` (예: `au10001.service.ts`)
   - 클래스명: PascalCase (예: `Au10001Service`)
@@ -25,12 +27,18 @@
   - 파일명: `[TR번호(소문자)].md` (예: `au10001.md`)
 
 ### 2.2. 텔레그램 봇 (Telegram Domain)
+
 - **명령어 처리기 (Commands)**: `src/telegram/commands/` 하위에 개별 봇 명령어(Command)별로 파일을 분리하여 구현합니다.
 - **상태 관리**: 사용자 세션, 인증 상태 등은 `telegram-state.service.ts`에서 관리합니다.
 - **이벤트/메시지 수신**: 텔레그램에서 들어오는 웹훅/폴링 업데이트 처리는 `telegram.update.ts`에서 담당합니다.
 
 ### 2.3. 공통 유틸리티 (Common/Utils)
+
 - `src/common/utils/` 하위에 도메인 종속성이 없는 순수 함수 위주로 작성합니다.
 - 파일명: `[기능명].util.ts`
 - **구현 방식**: 일반 함수 선언(`function() {}`) 대신, 반드시 **화살표 함수(`const func = () => {}`)**를 사용하여 구현합니다.
+
+## 3. 테스트 규칙 (Testing Rules)
+
+- **자동 테스트 금지**: 에이전트 임의로 자동 테스트(예: `npm run test`, `jest` 등)를 수행하는 것을 금지합니다. 자동 테스트 실행 시 불필요한 텔레그램 메시지가 전송되므로, 테스트 검증이 필요할 경우 반드시 사용자의 사전 승인을 받거나 사용자가 직접 실행하도록 요청해야 합니다.
 </RULE>

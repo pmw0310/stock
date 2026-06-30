@@ -1,3 +1,6 @@
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 import {
   Injectable,
   Logger,
@@ -45,6 +48,7 @@ export class TelegramStateService
 
   /**
    * 애플리케이션 시작 시 호출되어 시작 알림을 전송하고 모의투자 로그인을 자동으로 수행합니다.
+   * 단, 핫 리로드(코드 변경으로 인한 재시작) 시에는 자동 로그인을 건너뜁니다.
    */
   onApplicationBootstrap = async (): Promise<void> => {
     const chatId = this.configService.get<string>('TELEGRAM_CHAT_ID');
@@ -53,6 +57,39 @@ export class TelegramStateService
         'TELEGRAM_CHAT_ID 설정이 없어 프로그램 시작 알림 및 자동 로그인을 건너뜁니다.',
       );
       return;
+    }
+
+    // 핫 리로드(코드 변경으로 인한 재시작) 방지 처리
+    const tempFilePath = path.join(os.tmpdir(), 'stock-app-parent-pid.txt');
+    const currentPpid = process.ppid.toString();
+    let isHotReload = false;
+
+    try {
+      if (fs.existsSync(tempFilePath)) {
+        const savedPpid = fs.readFileSync(tempFilePath, 'utf8').trim();
+        if (savedPpid === currentPpid) {
+          isHotReload = true;
+        }
+      }
+    } catch (err) {
+      this.logger.warn(
+        `핫 리로드 감지 파일을 읽는 중 오류가 발생했습니다: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+
+    if (isHotReload) {
+      this.logger.log(
+        '핫 리로드로 인한 재시작이 감지되어 자동 로그인을 건너뜁니다.',
+      );
+      return;
+    }
+
+    try {
+      fs.writeFileSync(tempFilePath, currentPpid, 'utf8');
+    } catch (err) {
+      this.logger.warn(
+        `핫 리로드 감지 파일에 PPID를 기록하는 중 오류가 발생했습니다: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
 
     try {
