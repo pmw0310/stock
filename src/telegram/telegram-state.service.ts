@@ -529,6 +529,38 @@ export class TelegramStateService
   };
 
   /**
+   * 모든 설정값들을 환경 변수 또는 지정된 디폴트 값으로 재설정합니다.
+   * 설정 변경 후에는 상태를 저장하고 토큰 자동 갱신 스케줄러를 재등록합니다.
+   */
+  readonly resetToDefault = (): void => {
+    this.isRealTrading = false;
+
+    const envHour = this.configService.get<string>('TOKEN_RENEWAL_HOUR');
+    this.renewalHour = envHour !== undefined ? parseInt(envHour, 10) : 8;
+    if (isNaN(this.renewalHour)) {
+      this.renewalHour = 8;
+    }
+
+    const envMinute = this.configService.get<string>('TOKEN_RENEWAL_MINUTE');
+    this.renewalMinute = envMinute !== undefined ? parseInt(envMinute, 10) : 55;
+    if (isNaN(this.renewalMinute)) {
+      this.renewalMinute = 55;
+    }
+
+    this.marketStartTime =
+      this.configService.get<string>('MARKET_START_TIME') ?? '09:00';
+    this.marketEndTime =
+      this.configService.get<string>('MARKET_END_TIME') ?? '15:30';
+
+    this.saveState();
+
+    this.clearRenewalTimeout();
+    this.scheduleNextRenewal();
+
+    this.logger.log('모든 세팅값들이 디폴트로 초기화되었습니다.');
+  };
+
+  /**
    * 보안에 민감한 정보(토큰 등)를 제외한 현재 설정 정보를 객체 형태로 반환합니다.
    * @returns 설정 데이터 객체 (accessToken 제외)
    */

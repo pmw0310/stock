@@ -13,6 +13,7 @@ import { ReportCommand } from '@/telegram/commands/report.command';
 import { MkhrCommand } from '@/telegram/commands/mkhr.command';
 import { SttsCommand } from '@/telegram/commands/stts.command';
 import { RsvCommand } from '@/telegram/commands/rsv.command';
+import { HelpCommand } from '@/telegram/commands/help.command';
 import { TelegramCommand } from '@/telegram/commands/command.interface';
 import { ExtraReplyMessage } from 'node_modules/telegraf/typings/telegram-types';
 
@@ -37,6 +38,7 @@ export class TelegramUpdate implements OnApplicationBootstrap {
     private readonly mkhrCommand: MkhrCommand,
     private readonly sttsCommand: SttsCommand,
     private readonly rsvCommand: RsvCommand,
+    private readonly helpCommand: HelpCommand,
     @InjectBot() private readonly bot: Telegraf<Context>,
   ) {
     this.handlers = [
@@ -50,6 +52,7 @@ export class TelegramUpdate implements OnApplicationBootstrap {
       mkhrCommand,
       sttsCommand,
       rsvCommand,
+      helpCommand,
     ];
   }
 

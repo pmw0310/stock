@@ -12,6 +12,7 @@ import { ReportCommand } from '@/telegram/commands/report.command';
 import { MkhrCommand } from '@/telegram/commands/mkhr.command';
 import { SttsCommand } from '@/telegram/commands/stts.command';
 import { RsvCommand } from '@/telegram/commands/rsv.command';
+import { HelpCommand } from '@/telegram/commands/help.command';
 
 /**
  * 텔레그램 봇 관련 기능을 제공하는 모듈입니다.
@@ -31,6 +32,7 @@ import { RsvCommand } from '@/telegram/commands/rsv.command';
     MkhrCommand,
     SttsCommand,
     RsvCommand,
+    HelpCommand,
   ],
 })
 export class TelegramModule {}
