@@ -8,6 +8,7 @@ import { LoginRenewalCommand } from '@/telegram/commands/login-renewal.command';
 import { PowerOffCommand } from '@/telegram/commands/power-off.command';
 import { SearchCommand } from '@/telegram/commands/search.command';
 import { BuyCommand } from '@/telegram/commands/buy.command';
+import { SellCommand } from '@/telegram/commands/sell.command';
 import { ReportCommand } from '@/telegram/commands/report.command';
 import { TelegramCommand } from '@/telegram/commands/command.interface';
 
@@ -27,6 +28,7 @@ export class TelegramUpdate {
     private readonly powerOffCommand: PowerOffCommand,
     private readonly searchCommand: SearchCommand,
     private readonly buyCommand: BuyCommand,
+    private readonly sellCommand: SellCommand,
     private readonly reportCommand: ReportCommand,
   ) {
     this.handlers = [
@@ -35,6 +37,7 @@ export class TelegramUpdate {
       powerOffCommand,
       searchCommand,
       buyCommand,
+      sellCommand,
       reportCommand,
     ];
   }

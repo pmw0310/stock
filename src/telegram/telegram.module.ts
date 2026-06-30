@@ -7,6 +7,7 @@ import { LoginRenewalCommand } from '@/telegram/commands/login-renewal.command';
 import { PowerOffCommand } from '@/telegram/commands/power-off.command';
 import { SearchCommand } from '@/telegram/commands/search.command';
 import { BuyCommand } from '@/telegram/commands/buy.command';
+import { SellCommand } from '@/telegram/commands/sell.command';
 import { ReportCommand } from '@/telegram/commands/report.command';
 
 /**
@@ -22,6 +23,7 @@ import { ReportCommand } from '@/telegram/commands/report.command';
     PowerOffCommand,
     SearchCommand,
     BuyCommand,
+    SellCommand,
     ReportCommand,
   ],
 })
