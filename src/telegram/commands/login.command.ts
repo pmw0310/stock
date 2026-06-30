@@ -39,7 +39,11 @@ export class LoginCommand implements TelegramCommand {
       const response = await this.au10001Service.issueAccessToken(useReal);
 
       if (response.token) {
-        this.stateService.setLoginInfo(response.token, useReal);
+        this.stateService.setLoginInfo(
+          response.token,
+          useReal,
+          response.expiresDt,
+        );
 
         await ctx.reply(`${tradingType} 로그인 성공!`);
         this.logger.log(

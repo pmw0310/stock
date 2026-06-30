@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { HttpModule } from '@nestjs/axios';
+import { ScheduleModule } from '@nestjs/schedule';
 import { KiwoomModule } from '@/kiwoom/kiwoom.module';
 import { TelegrafModule } from 'nestjs-telegraf';
 import { TelegramModule } from '@/telegram/telegram.module';
@@ -12,6 +13,7 @@ import * as https from 'https';
  */
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',

@@ -38,3 +38,6 @@ Thumbs.db
 
 # Nest JS
 /temp_nest_app
+
+# State Persistence
+state.json
