@@ -3,8 +3,10 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom, Observable } from 'rxjs';
 import { AxiosResponse } from 'axios';
-import { Au10001RequestDto } from '@/kiwoom/dto/au10001-request.dto';
-import { Au10001ResponseDto } from '@/kiwoom/dto/au10001-response.dto';
+import {
+  Au10001RequestDto,
+  Au10001ResponseDto,
+} from '@/kiwoom/dto/au10001.dto';
 
 /**
  * [au10001] 접근토큰발급을 담당하는 서비스입니다.
@@ -45,6 +47,8 @@ export class Au10001Service {
     const url = `${host}/oauth2/token`;
     const headers = {
       'Content-Type': 'application/json; charset=UTF-8',
+      'api-id': 'au10001',
+      authorization: '',
     };
 
     const requestBody: Au10001RequestDto = {

@@ -3,8 +3,10 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom, Observable } from 'rxjs';
 import { AxiosResponse } from 'axios';
-import { Ka10032RequestDto } from '@/kiwoom/dto/ka10032-request.dto';
-import { Ka10032ResponseDto } from '@/kiwoom/dto/ka10032-response.dto';
+import {
+  Ka10032RequestDto,
+  Ka10032ResponseDto,
+} from '@/kiwoom/dto/ka10032.dto';
 
 /**
  * [ka10032] 국내주식 거래대금 상위 요청을 담당하는 서비스입니다.
