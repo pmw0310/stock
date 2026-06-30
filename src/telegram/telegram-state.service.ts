@@ -11,7 +11,18 @@ import { ConfigService } from '@nestjs/config';
 import { InjectBot } from 'nestjs-telegraf';
 import { Telegraf, Context } from 'telegraf';
 import { SchedulerRegistry } from '@nestjs/schedule';
+import { CronJob } from 'cron';
 import { Au10001Service } from '@/kiwoom/au10001.service';
+
+/**
+ * 텔레그램 명령 예약 정보 인터페이스입니다.
+ */
+export interface Reservation {
+  id: number;
+  time: string;
+  command: string;
+  isOnce?: boolean;
+}
 
 /**
  * 파일에 저장되는 상태 데이터 구조 정의 인터페이스입니다.
@@ -22,6 +33,9 @@ interface StateData {
   renewalHour: number;
   renewalMinute: number;
   expiresDt: string | null;
+  marketStartTime: string;
+  marketEndTime: string;
+  reservations?: Reservation[];
 }
 
 /**
@@ -46,6 +60,15 @@ export class TelegramStateService
   private renewalMinute = 55;
   private readonly RENEWAL_TIMEOUT_NAME = 'token-renewal-timeout';
 
+  // 장 거래 시간 설정을 위한 상태 (기본값 09:00 ~ 15:30)
+  private marketStartTime = '09:00';
+  private marketEndTime = '15:30';
+
+  // 예약 관련 상태
+  private reservations: Reservation[] = [];
+  private nextReservationId = 1;
+  private executeCallback: ((command: string) => Promise<void>) | null = null;
+
   constructor(
     private readonly configService: ConfigService,
     private readonly au10001Service: Au10001Service,
@@ -66,6 +89,9 @@ export class TelegramStateService
         renewalHour: this.renewalHour,
         renewalMinute: this.renewalMinute,
         expiresDt: this.expiresDt,
+        marketStartTime: this.marketStartTime,
+        marketEndTime: this.marketEndTime,
+        reservations: this.reservations,
       };
       fs.writeFileSync(
         this.stateFilePath,
@@ -130,6 +156,35 @@ export class TelegramStateService
         this.renewalMinute = 55;
       }
     }
+
+    // 2.4 장 시작 시간 복원
+    if (
+      fileData.marketStartTime !== undefined &&
+      fileData.marketStartTime !== null
+    ) {
+      this.marketStartTime = fileData.marketStartTime;
+    } else {
+      this.marketStartTime =
+        this.configService.get<string>('MARKET_START_TIME') ?? '09:00';
+    }
+
+    // 2.5 장 종료 시간 복원
+    if (
+      fileData.marketEndTime !== undefined &&
+      fileData.marketEndTime !== null
+    ) {
+      this.marketEndTime = fileData.marketEndTime;
+    } else {
+      this.marketEndTime =
+        this.configService.get<string>('MARKET_END_TIME') ?? '15:30';
+    }
+
+    // 2.6 예약 데이터 복원
+    this.reservations = fileData.reservations ?? [];
+    this.nextReservationId =
+      this.reservations.length > 0
+        ? Math.max(...this.reservations.map((r) => r.id)) + 1
+        : 1;
 
     // 3. 로드된 최신 상태를 state.json에 즉시 다시 써서 일치시킴
     this.saveState();
@@ -275,6 +330,11 @@ export class TelegramStateService
         }
       }
     }
+
+    // 저장된 모든 예약을 스케줄러에 등록
+    this.reservations.forEach((reservation) => {
+      this.scheduleReservation(reservation);
+    });
   };
 
   /**
@@ -438,6 +498,238 @@ export class TelegramStateService
     } finally {
       // 다음 갱신 일정을 재예약합니다.
       this.scheduleNextRenewal();
+    }
+  };
+
+  /**
+   * 장 시작 시간을 반환합니다.
+   * @returns 장 시작 시간 (HH:mm)
+   */
+  readonly getMarketStartTime = (): string => {
+    return this.marketStartTime;
+  };
+
+  /**
+   * 장 종료 시간을 반환합니다.
+   * @returns 장 종료 시간 (HH:mm)
+   */
+  readonly getMarketEndTime = (): string => {
+    return this.marketEndTime;
+  };
+
+  /**
+   * 장 시작 및 종료 시간을 설정하고 저장합니다.
+   * @param startTime - 시작 시간 (HH:mm)
+   * @param endTime - 종료 시간 (HH:mm)
+   */
+  readonly setMarketHours = (startTime: string, endTime: string): void => {
+    this.marketStartTime = startTime;
+    this.marketEndTime = endTime;
+    this.saveState();
+  };
+
+  /**
+   * 보안에 민감한 정보(토큰 등)를 제외한 현재 설정 정보를 객체 형태로 반환합니다.
+   * @returns 설정 데이터 객체 (accessToken 제외)
+   */
+  readonly getSafeState = (): Omit<StateData, 'accessToken'> => {
+    return {
+      isRealTrading: this.isRealTrading,
+      renewalHour: this.renewalHour,
+      renewalMinute: this.renewalMinute,
+      expiresDt: this.expiresDt,
+      marketStartTime: this.marketStartTime,
+      marketEndTime: this.marketEndTime,
+    };
+  };
+
+  /**
+   * 예약 명령이 트리거될 때 실행할 콜백 함수를 등록합니다.
+   * @param callback - 명령어 실행 콜백 함수
+   */
+  readonly registerExecuteCallback = (
+    callback: (command: string) => Promise<void>,
+  ): void => {
+    this.executeCallback = callback;
+  };
+
+  /**
+   * 새로운 예약을 추가하고 스케줄러에 등록합니다.
+   * @param time - 실행 시간 ("HH:mm" 형식)
+   * @param command - 실행할 명령어
+   * @param isOnce - 1회성 예약 여부
+   * @returns 추가된 예약 정보
+   */
+  readonly addReservation = (
+    time: string,
+    command: string,
+    isOnce = false,
+  ): Reservation => {
+    const reservation: Reservation = {
+      id: this.nextReservationId++,
+      time,
+      command,
+      isOnce,
+    };
+    this.reservations.push(reservation);
+    this.saveState();
+    this.scheduleReservation(reservation);
+    return reservation;
+  };
+
+  /**
+   * 특정 예약을 삭제하고 스케줄러에서 해제합니다.
+   * @param id - 예약 일련번호
+   * @returns 삭제 성공 여부
+   */
+  readonly removeReservation = (id: number): boolean => {
+    const index = this.reservations.findIndex((r) => r.id === id);
+    if (index === -1) {
+      return false;
+    }
+
+    this.unscheduleReservation(id);
+    this.reservations.splice(index, 1);
+    this.saveState();
+    return true;
+  };
+
+  /**
+   * 모든 예약을 일괄 삭제하고 스케줄러에서 해제합니다.
+   * @returns 삭제된 예약의 개수
+   */
+  readonly removeAllReservations = (): number => {
+    const count = this.reservations.length;
+    this.reservations.forEach((r) => {
+      this.unscheduleReservation(r.id);
+    });
+    this.reservations = [];
+    this.saveState();
+    return count;
+  };
+
+  /**
+   * 현재 등록되어 있는 모든 예약 목록을 반환합니다.
+   * @returns 예약 목록 배열
+   */
+  readonly getReservations = (): Reservation[] => {
+    return [...this.reservations];
+  };
+
+  /**
+   * 예약을 스케줄러에 등록합니다.
+   * @param reservation - 등록할 예약 정보
+   */
+  private readonly scheduleReservation = (reservation: Reservation): void => {
+    const [hourStr, minuteStr] = reservation.time.split(':');
+    const hour = parseInt(hourStr, 10);
+    const minute = parseInt(minuteStr, 10);
+
+    // 중복 등록 방지를 위해 기존 스케줄 제거
+    this.unscheduleReservation(reservation.id);
+
+    if (reservation.isOnce) {
+      const ms = this.getMsUntilTime(hour, minute);
+      const jobName = `rsv-once-${reservation.id}`;
+
+      try {
+        const timeout = setTimeout(() => {
+          void (async () => {
+            await this.executeReservation(reservation);
+            // 실행 완료 후 자동 삭제
+            this.removeReservation(reservation.id);
+          })();
+        }, ms);
+
+        this.schedulerRegistry.addTimeout(jobName, timeout);
+        const targetTime = new Date(Date.now() + ms);
+        const targetTimeString = targetTime.toLocaleString('ko-KR', {
+          hour12: false,
+        });
+        this.logger.log(
+          `[1회성 예약 설정] ID: ${reservation.id}, 시간: ${reservation.time}, 실행 예정 시각: ${targetTimeString}, 명령어: ${reservation.command}`,
+        );
+      } catch (error: unknown) {
+        this.logger.error(
+          `1회성 예약 스케줄 등록 중 오류 발생 (ID: ${reservation.id}): ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    } else {
+      // 크론 표현식: 00초, minute분, hour시, 매일, 매월, 월-금요일(1-5)
+      const cronExpression = `0 ${minute} ${hour} * * 1-5`;
+      const jobName = `rsv-${reservation.id}`;
+
+      try {
+        const job = new CronJob(cronExpression, () => {
+          void this.executeReservation(reservation);
+        });
+
+        this.schedulerRegistry.addCronJob(jobName, job);
+        job.start();
+        this.logger.log(
+          `[반복 예약 설정] ID: ${reservation.id}, 시간: ${reservation.time}, 명령어: ${reservation.command}`,
+        );
+      } catch (error: unknown) {
+        this.logger.error(
+          `반복 예약 스케줄 등록 중 오류 발생 (ID: ${reservation.id}): ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+  };
+
+  /**
+   * 스케줄러에서 특정 예약을 삭제합니다. (크론 및 타이머 작업 모두 지원)
+   * @param id - 예약 일련번호
+   */
+  private readonly unscheduleReservation = (id: number): void => {
+    const cronJobName = `rsv-${id}`;
+    const timeoutName = `rsv-once-${id}`;
+
+    try {
+      const cronJobs = this.schedulerRegistry.getCronJobs();
+      if (cronJobs.has(cronJobName)) {
+        this.schedulerRegistry.deleteCronJob(cronJobName);
+        this.logger.log(`[예약 해제] 크론 ID: ${id}`);
+      }
+    } catch (error: unknown) {
+      this.logger.warn(
+        `예약 크론 제거 중 오류 발생 (ID: ${id}): ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+
+    try {
+      const timeouts = this.schedulerRegistry.getTimeouts();
+      if (timeouts.includes(timeoutName)) {
+        this.schedulerRegistry.deleteTimeout(timeoutName);
+        this.logger.log(`[예약 해제] 타이머 ID: ${id}`);
+      }
+    } catch (error: unknown) {
+      this.logger.warn(
+        `예약 타이머 제거 중 오류 발생 (ID: ${id}): ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  };
+
+  /**
+   * 예약 작업 시점에 실제로 명령어를 콜백을 통해 트리거합니다.
+   * @param reservation - 실행할 예약 정보
+   */
+  private readonly executeReservation = async (
+    reservation: Reservation,
+  ): Promise<void> => {
+    this.logger.log(
+      `[예약 실행 시작] ID: ${reservation.id}, 명령어: ${reservation.command}`,
+    );
+    if (this.executeCallback) {
+      try {
+        await this.executeCallback(reservation.command);
+      } catch (error: unknown) {
+        this.logger.error(
+          `예약 명령어 실행 중 오류 발생 (ID: ${reservation.id}): ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    } else {
+      this.logger.warn('예약 실행 콜백이 등록되지 않았습니다.');
     }
   };
 }

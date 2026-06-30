@@ -9,6 +9,9 @@ import { SearchCommand } from '@/telegram/commands/search.command';
 import { BuyCommand } from '@/telegram/commands/buy.command';
 import { SellCommand } from '@/telegram/commands/sell.command';
 import { ReportCommand } from '@/telegram/commands/report.command';
+import { MkhrCommand } from '@/telegram/commands/mkhr.command';
+import { SttsCommand } from '@/telegram/commands/stts.command';
+import { RsvCommand } from '@/telegram/commands/rsv.command';
 
 /**
  * 텔레그램 봇 관련 기능을 제공하는 모듈입니다.
@@ -25,6 +28,9 @@ import { ReportCommand } from '@/telegram/commands/report.command';
     BuyCommand,
     SellCommand,
     ReportCommand,
+    MkhrCommand,
+    SttsCommand,
+    RsvCommand,
   ],
 })
 export class TelegramModule {}
