@@ -36,6 +36,8 @@ interface StateData {
   marketStartTime: string;
   marketEndTime: string;
   reservations?: Reservation[];
+  tpr?: number | null;
+  slr?: number | null;
 }
 
 /**
@@ -69,6 +71,10 @@ export class TelegramStateService
   private nextReservationId = 1;
   private executeCallback: ((command: string) => Promise<void>) | null = null;
 
+  // 익절/손절 퍼센티지 기준 (기본값 null)
+  private tpr: number | null = null;
+  private slr: number | null = null;
+
   constructor(
     private readonly configService: ConfigService,
     private readonly au10001Service: Au10001Service,
@@ -92,6 +98,8 @@ export class TelegramStateService
         marketStartTime: this.marketStartTime,
         marketEndTime: this.marketEndTime,
         reservations: this.reservations,
+        tpr: this.tpr,
+        slr: this.slr,
       };
       fs.writeFileSync(
         this.stateFilePath,
@@ -185,6 +193,23 @@ export class TelegramStateService
       this.reservations.length > 0
         ? Math.max(...this.reservations.map((r) => r.id)) + 1
         : 1;
+
+    // 2.7 익절 및 손절 설정 복원 (state.json -> .env -> 기본값 5/-5)
+    if (fileData.tpr !== undefined && fileData.tpr !== null) {
+      this.tpr = Math.abs(fileData.tpr);
+    } else {
+      const envTpr = this.configService.get<string>('DEFAULT_TPR');
+      const parsedTpr = envTpr !== undefined ? parseFloat(envTpr) : 5;
+      this.tpr = isNaN(parsedTpr) ? 5 : Math.abs(parsedTpr);
+    }
+
+    if (fileData.slr !== undefined && fileData.slr !== null) {
+      this.slr = -Math.abs(fileData.slr);
+    } else {
+      const envSlr = this.configService.get<string>('DEFAULT_SLR');
+      const parsedSlr = envSlr !== undefined ? parseFloat(envSlr) : -5;
+      this.slr = isNaN(parsedSlr) ? -5 : -Math.abs(parsedSlr);
+    }
 
     // 3. 로드된 최신 상태를 state.json에 즉시 다시 써서 일치시킴
     this.saveState();
@@ -552,6 +577,14 @@ export class TelegramStateService
     this.marketEndTime =
       this.configService.get<string>('MARKET_END_TIME') ?? '15:30';
 
+    const envTpr = this.configService.get<string>('DEFAULT_TPR');
+    const parsedTpr = envTpr !== undefined ? parseFloat(envTpr) : 5;
+    this.tpr = isNaN(parsedTpr) ? 5 : Math.abs(parsedTpr);
+
+    const envSlr = this.configService.get<string>('DEFAULT_SLR');
+    const parsedSlr = envSlr !== undefined ? parseFloat(envSlr) : -5;
+    this.slr = isNaN(parsedSlr) ? -5 : -Math.abs(parsedSlr);
+
     this.saveState();
 
     this.clearRenewalTimeout();
@@ -572,7 +605,53 @@ export class TelegramStateService
       expiresDt: this.expiresDt,
       marketStartTime: this.marketStartTime,
       marketEndTime: this.marketEndTime,
+      tpr: this.tpr,
+      slr: this.slr,
     };
+  };
+
+  /**
+   * 익절 기준(tpr)을 설정합니다.
+   * 입력된 값의 부호에 상관없이 양수로 전환하여 저장합니다.
+   * @param value - 익절 기준 퍼센티지 또는 null
+   */
+  readonly setTpr = (value: number | null): void => {
+    if (value === null) {
+      this.tpr = null;
+    } else {
+      this.tpr = Math.abs(value);
+    }
+    this.saveState();
+  };
+
+  /**
+   * 익절 기준(tpr)을 반환합니다.
+   * @returns 익절 기준 퍼센티지 또는 null
+   */
+  readonly getTpr = (): number | null => {
+    return this.tpr;
+  };
+
+  /**
+   * 손절 기준(slr)을 설정합니다.
+   * 입력된 값의 부호에 상관없이 음수로 전환하여 저장합니다.
+   * @param value - 손절 기준 퍼센티지 또는 null
+   */
+  readonly setSlr = (value: number | null): void => {
+    if (value === null) {
+      this.slr = null;
+    } else {
+      this.slr = -Math.abs(value);
+    }
+    this.saveState();
+  };
+
+  /**
+   * 손절 기준(slr)을 반환합니다.
+   * @returns 손절 기준 퍼센티지 또는 null
+   */
+  readonly getSlr = (): number | null => {
+    return this.slr;
   };
 
   /**

@@ -39,6 +39,14 @@ export class SttsCommand implements TelegramCommand {
 
       const formattedRenewalTime = `${String(safeState.renewalHour).padStart(2, '0')}:${String(safeState.renewalMinute).padStart(2, '0')}`;
       const tradingType = safeState.isRealTrading ? '실전투자' : '모의투자';
+      const formattedTpr =
+        safeState.tpr !== null && safeState.tpr !== undefined
+          ? `${safeState.tpr}%`
+          : '설정 안 됨';
+      const formattedSlr =
+        safeState.slr !== null && safeState.slr !== undefined
+          ? `${safeState.slr}%`
+          : '설정 안 됨';
 
       const message = [
         resetMsg + '⚙️ **현재 설정 정보 (stts)**',
@@ -47,6 +55,8 @@ export class SttsCommand implements TelegramCommand {
         `• 토큰 자동 갱신 시간: ${formattedRenewalTime}`,
         `• 장 시작 시간: ${safeState.marketStartTime}`,
         `• 장 종료 시간: ${safeState.marketEndTime}`,
+        `• 익절 기준: ${formattedTpr}`,
+        `• 손절 기준: ${formattedSlr}`,
       ].join('\n');
 
       await ctx.reply(message);
