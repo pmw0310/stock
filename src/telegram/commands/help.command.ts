@@ -62,7 +62,11 @@ export class HelpCommand implements TelegramCommand {
         '• <code>rsv remove {번호}</code> - 특정 예약 스케줄 삭제 (예: <code>rsv remove 1</code>)',
         '• <code>rsv remove all</code> - 등록된 모든 예약 스케줄 일괄 삭제',
         '',
-        '🔌 <b>5. 기타 명령어</b>',
+        '🛑 <b>5. 실시간 스탑로스 엔진 (Stop-Loss)</b>',
+        '• <code>start stls</code> - 실시간 스탑로스 감시 및 자동 매도 엔진 시작',
+        '• <code>stop stls</code> - 실시간 스탑로스 엔진 중지 및 웹소켓 연결 해제',
+        '',
+        '🔌 <b>6. 기타 명령어</b>',
         '• <code>help</code> - 사용 가능한 모든 명령어 도움말 출력',
         '• <code>power off</code> - 프로그램 종료 (부모 프로세스 포함)',
       ].join('\n');

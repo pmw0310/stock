@@ -6,6 +6,8 @@ import {
   Logger,
   OnModuleDestroy,
   OnApplicationBootstrap,
+  forwardRef,
+  Inject,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectBot } from 'nestjs-telegraf';
@@ -13,6 +15,7 @@ import { Telegraf, Context } from 'telegraf';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { CronJob } from 'cron';
 import { Au10001Service } from '@/kiwoom/au10001.service';
+import { StopLossService } from '@/kiwoom/stop-loss.service';
 
 /**
  * 텔레그램 명령 예약 정보 인터페이스입니다.
@@ -38,6 +41,7 @@ interface StateData {
   reservations?: Reservation[];
   tpr?: number | null;
   slr?: number | null;
+  isStopLossRunning?: boolean;
 }
 
 /**
@@ -71,15 +75,18 @@ export class TelegramStateService
   private nextReservationId = 1;
   private executeCallback: ((command: string) => Promise<void>) | null = null;
 
-  // 익절/손절 퍼센티지 기준 (기본값 null)
+  // 익절/손절 퍼센티지 기준 (기본값 null) 및 스탑로스 상태
   private tpr: number | null = null;
   private slr: number | null = null;
+  private isStopLossRunning = false;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly au10001Service: Au10001Service,
     private readonly schedulerRegistry: SchedulerRegistry,
     @InjectBot() private readonly bot: Telegraf<Context>,
+    @Inject(forwardRef(() => StopLossService))
+    private readonly stopLossService: StopLossService,
   ) {
     this.loadState();
   }
@@ -100,6 +107,7 @@ export class TelegramStateService
         reservations: this.reservations,
         tpr: this.tpr,
         slr: this.slr,
+        isStopLossRunning: this.isStopLossRunning,
       };
       fs.writeFileSync(
         this.stateFilePath,
@@ -210,6 +218,9 @@ export class TelegramStateService
       const parsedSlr = envSlr !== undefined ? parseFloat(envSlr) : -5;
       this.slr = isNaN(parsedSlr) ? -5 : -Math.abs(parsedSlr);
     }
+
+    // 2.8 스탑로스 상태 복원
+    this.isStopLossRunning = fileData.isStopLossRunning ?? false;
 
     // 3. 로드된 최신 상태를 state.json에 즉시 다시 써서 일치시킴
     this.saveState();
@@ -360,6 +371,26 @@ export class TelegramStateService
     this.reservations.forEach((reservation) => {
       this.scheduleReservation(reservation);
     });
+
+    // 스탑로스 엔진 자동 시작 처리
+    if (this.isStopLossRunning) {
+      // stopLossService.start() 내부에서 getIsStopLossRunning()이 true이면
+      // 이미 실행 중이라 판단하여 시작하지 않으므로 일시적으로 false로 만듭니다.
+      this.isStopLossRunning = false;
+      if (!isHotReload) {
+        await this.bot.telegram.sendMessage(
+          chatId,
+          '🤖 이전 세션에서 스탑로스 엔진이 작동 중이었습니다. 엔진을 자동으로 재시작합니다.',
+        );
+      }
+      try {
+        await this.stopLossService.start();
+      } catch (err) {
+        this.logger.error(
+          `자동 스탑로스 재시작 실패: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
+    }
   };
 
   /**
@@ -607,6 +638,7 @@ export class TelegramStateService
       marketEndTime: this.marketEndTime,
       tpr: this.tpr,
       slr: this.slr,
+      isStopLossRunning: this.isStopLossRunning,
     };
   };
 
@@ -652,6 +684,23 @@ export class TelegramStateService
    */
   readonly getSlr = (): number | null => {
     return this.slr;
+  };
+
+  /**
+   * 스탑로스 엔진 실행 상태를 설정합니다.
+   * @param isRunning - 실행 여부
+   */
+  readonly setStopLossRunning = (isRunning: boolean): void => {
+    this.isStopLossRunning = isRunning;
+    this.saveState();
+  };
+
+  /**
+   * 스탑로스 엔진 실행 상태를 반환합니다.
+   * @returns 실행 여부
+   */
+  readonly getIsStopLossRunning = (): boolean => {
+    return this.isStopLossRunning;
   };
 
   /**

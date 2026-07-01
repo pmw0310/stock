@@ -3,6 +3,7 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { firstValueFrom, Observable } from 'rxjs';
 import { AxiosResponse } from 'axios';
+import axiosRetry from 'axios-retry';
 import {
   Kt10001RequestDto,
   Kt10001ResponseDto,
@@ -18,7 +19,24 @@ export class Kt10001Service {
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    // Axios 레벨에서 429 및 네트워크 에러 자동 재시도 설정
+    axiosRetry(this.httpService.axiosRef, {
+      retries: 3,
+      retryDelay: (retryCount) => axiosRetry.exponentialDelay(retryCount),
+      retryCondition: (error) => {
+        return (
+          axiosRetry.isNetworkOrIdempotentRequestError(error) ||
+          error.response?.status === 429
+        );
+      },
+      onRetry: (retryCount, error) => {
+        this.logger.warn(
+          `매도 주문 API 요청 실패 (상태 코드: ${error.response?.status}). ${retryCount}회차 재시도 중...`,
+        );
+      },
+    });
+  }
 
   /**
    * 주식 신규 매도주문을 키움증권 서버로 전송합니다.

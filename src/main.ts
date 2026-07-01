@@ -26,6 +26,9 @@ const bootstrap = async (): Promise<void> => {
   // 전역 인터셉터 등록 (스네이크 케이스 <-> 카멜 케이스 변환)
   app.useGlobalInterceptors(new SnakeToCamelInterceptor());
 
+  // 프로세스 종료 시 온모듈디스트로이 훅 실행을 위한 셧다운 훅 활성화
+  app.enableShutdownHooks();
+
   await app.listen(process.env.PORT ?? 3000);
 };
 

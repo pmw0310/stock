@@ -15,6 +15,8 @@ import { RsvCommand } from '@/telegram/commands/rsv.command';
 import { HelpCommand } from '@/telegram/commands/help.command';
 import { TprCommand } from '@/telegram/commands/tpr.command';
 import { SlrCommand } from '@/telegram/commands/slr.command';
+import { StlsCommand } from '@/telegram/commands/stls.command';
+import { StopLossService } from '@/kiwoom/stop-loss.service';
 
 /**
  * 텔레그램 봇 관련 기능을 제공하는 모듈입니다.
@@ -37,6 +39,8 @@ import { SlrCommand } from '@/telegram/commands/slr.command';
     HelpCommand,
     TprCommand,
     SlrCommand,
+    StlsCommand,
+    StopLossService,
   ],
 })
 export class TelegramModule {}
