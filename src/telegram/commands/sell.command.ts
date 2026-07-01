@@ -66,20 +66,17 @@ export class SellCommand implements TelegramCommand {
       return;
     }
 
-    let stkCd = rawStockInput;
+    let stkCd = rawStockInput.toUpperCase();
 
-    // 종목코드 앞의 'A' 또는 'a' 제거 (7자리인 경우)
-    if (
-      stkCd.length === 7 &&
-      (stkCd.startsWith('a') || stkCd.startsWith('A'))
-    ) {
+    // 종목코드 앞의 'A' 제거 (7자리인 경우)
+    if (stkCd.length === 7 && stkCd.startsWith('A')) {
       stkCd = stkCd.substring(1);
     }
 
-    // 종목코드 유효성 검사 (6자리 숫자)
-    const stkCdRegex = /^\d{6}$/;
+    // 종목코드 유효성 검사 (6자리 영숫자)
+    const stkCdRegex = /^[0-9A-Z]{6}$/;
     if (!stkCdRegex.test(stkCd)) {
-      // 6자리 숫자가 아니면 종목명으로 판단하고 보유종목 리스트에서 찾습니다.
+      // 6자리 영숫자가 아니면 종목명으로 판단하고 보유종목 리스트에서 찾습니다.
       try {
         await ctx.reply(
           `보유종목에서 '${rawStockInput}' 종목을 검색하는 중입니다...`,

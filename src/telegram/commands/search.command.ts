@@ -37,10 +37,15 @@ export class SearchCommand implements TelegramCommand {
       return;
     }
 
-    const stkCd = parts[1].trim();
+    let stkCd = parts[1].trim().toUpperCase();
     if (!stkCd) {
       await ctx.reply('종목코드를 입력해주세요. (예: srch 005930)');
       return;
+    }
+
+    // 종목코드 앞의 'A' 제거 (7자리인 경우)
+    if (stkCd.length === 7 && stkCd.startsWith('A')) {
+      stkCd = stkCd.substring(1);
     }
 
     const token = this.stateService.getAccessToken();

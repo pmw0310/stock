@@ -43,22 +43,21 @@ export class BuyCommand implements TelegramCommand {
       return;
     }
 
-    let stkCd = parts[1].trim();
+    let stkCd = parts[1].trim().toUpperCase();
     const qtyStr = parts[2].trim();
     const prcStr = parts[3]?.trim();
 
-    // 종목코드 앞의 'A' 또는 'a' 제거 (7자리인 경우)
-    if (
-      stkCd.length === 7 &&
-      (stkCd.startsWith('a') || stkCd.startsWith('A'))
-    ) {
+    // 종목코드 앞의 'A' 제거 (7자리인 경우)
+    if (stkCd.length === 7 && stkCd.startsWith('A')) {
       stkCd = stkCd.substring(1);
     }
 
-    // 종목코드 유효성 검사 (6자리 숫자)
-    const stkCdRegex = /^\d{6}$/;
+    // 종목코드 유효성 검사 (6자리 영숫자)
+    const stkCdRegex = /^[0-9A-Z]{6}$/;
     if (!stkCdRegex.test(stkCd)) {
-      await ctx.reply('종목코드는 6자리 숫자여야 합니다. (예: 005930)');
+      await ctx.reply(
+        '종목코드는 6자리 영숫자여야 합니다. (예: 005930, 0001A0)',
+      );
       return;
     }
 
