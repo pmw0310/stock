@@ -17,6 +17,7 @@ import { HelpCommand } from '@/telegram/commands/help.command';
 import { TprCommand } from '@/telegram/commands/tpr.command';
 import { SlrCommand } from '@/telegram/commands/slr.command';
 import { StlsCommand } from '@/telegram/commands/stls.command';
+import { RankCommand } from '@/telegram/commands/rank.command';
 import { TelegramCommand } from '@/telegram/commands/command.interface';
 import { ExtraReplyMessage } from 'node_modules/telegraf/typings/telegram-types';
 
@@ -45,6 +46,7 @@ export class TelegramUpdate implements OnApplicationBootstrap {
     private readonly tprCommand: TprCommand,
     private readonly slrCommand: SlrCommand,
     private readonly stlsCommand: StlsCommand,
+    private readonly rankCommand: RankCommand,
     @InjectBot() private readonly bot: Telegraf<Context>,
   ) {
     this.handlers = [
@@ -61,6 +63,7 @@ export class TelegramUpdate implements OnApplicationBootstrap {
       tprCommand,
       slrCommand,
       stlsCommand,
+      rankCommand,
       helpCommand,
     ];
   }
