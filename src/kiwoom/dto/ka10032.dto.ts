@@ -1,4 +1,5 @@
 import { IsString, IsNotEmpty } from 'class-validator';
+import { KiwoomBaseResponseDto } from './kiwoom-base-response.dto';
 
 /**
  * 국내주식 거래대금 상위 요청을 위한 DTO 클래스입니다.
@@ -99,17 +100,7 @@ export class StockRankItem {
 /**
  * 국내주식 거래대금 상위 응답을 위한 DTO 클래스입니다.
  */
-export class Ka10032ResponseDto {
-  /**
-   * 결과코드 (0: 정상)
-   */
-  returnCode: number;
-
-  /**
-   * 결과메시지
-   */
-  returnMsg: string;
-
+export class Ka10032ResponseDto extends KiwoomBaseResponseDto {
   /**
    * 거래대금 상위 종목 리스트 묶음
    */

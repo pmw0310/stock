@@ -1,4 +1,5 @@
-import { IsString, IsNotEmpty, IsNumber } from 'class-validator';
+import { IsString, IsNotEmpty } from 'class-validator';
+import { KiwoomBaseResponseDto } from './kiwoom-base-response.dto';
 
 /**
  * 키움증권 접근 토큰 발급 요청을 위한 DTO 클래스입니다.
@@ -29,7 +30,7 @@ export class Au10001RequestDto {
 /**
  * 키움증권 접근 토큰 발급 응답을 위한 DTO 클래스입니다.
  */
-export class Au10001ResponseDto {
+export class Au10001ResponseDto extends KiwoomBaseResponseDto {
   /**
    * 토큰 만료 일시
    */
@@ -50,18 +51,4 @@ export class Au10001ResponseDto {
   @IsString()
   @IsNotEmpty()
   token: string;
-
-  /**
-   * 결과코드 (0: 정상)
-   */
-  @IsNumber()
-  @IsNotEmpty()
-  returnCode: number;
-
-  /**
-   * 결과메시지
-   */
-  @IsString()
-  @IsNotEmpty()
-  returnMsg: string;
 }

@@ -1,4 +1,5 @@
 import { IsString, IsNotEmpty, IsIn, IsOptional } from 'class-validator';
+import { KiwoomBaseResponseDto } from './kiwoom-base-response.dto';
 
 /**
  * 키움증권 계좌평가현황요청 (kt00004) 요청 DTO 클래스입니다.
@@ -119,17 +120,7 @@ export class StkAcntEvltPrstItem {
 /**
  * 키움증권 계좌평가현황요청 (kt00004) 응답 DTO 클래스입니다.
  */
-export class Kt00004ResponseDto {
-  /**
-   * 결과코드 (0: 정상, 이외의 숫자: 에러)
-   */
-  returnCode: number;
-
-  /**
-   * 결과메시지
-   */
-  returnMsg: string;
-
+export class Kt00004ResponseDto extends KiwoomBaseResponseDto {
   /**
    * 계좌명
    */

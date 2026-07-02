@@ -1,4 +1,5 @@
 import { IsString, IsNotEmpty } from 'class-validator';
+import { KiwoomBaseResponseDto } from './kiwoom-base-response.dto';
 
 /**
  * 국내주식 실시간종목조회순위요청(ka00198)을 위한 DTO 클래스입니다.
@@ -30,8 +31,6 @@ export class Ka00198ResponseItem {
 /**
  * 국내주식 실시간종목조회순위 응답을 위한 DTO 클래스입니다.
  */
-export class Ka00198ResponseDto {
-  returnCode: number;
-  returnMsg: string;
+export class Ka00198ResponseDto extends KiwoomBaseResponseDto {
   itemInqRank: Ka00198ResponseItem[];
 }

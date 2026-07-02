@@ -1,10 +1,5 @@
-import {
-  IsString,
-  IsNotEmpty,
-  IsOptional,
-  IsNumber,
-  IsIn,
-} from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsIn } from 'class-validator';
+import { KiwoomBaseResponseDto } from './kiwoom-base-response.dto';
 
 /**
  * 키움증권 주식 매도주문 (kt10001) 요청 DTO 클래스입니다.
@@ -100,7 +95,7 @@ export class Kt10001RequestDto {
 /**
  * 키움증권 주식 매도주문 (kt10001) 응답 DTO 클래스입니다.
  */
-export class Kt10001ResponseDto {
+export class Kt10001ResponseDto extends KiwoomBaseResponseDto {
   /**
    * 주문번호
    */
@@ -115,18 +110,4 @@ export class Kt10001ResponseDto {
   @IsOptional()
   @IsIn(['KRX', 'NXT', 'SOR'])
   dmstStexTp?: 'KRX' | 'NXT' | 'SOR';
-
-  /**
-   * 결과코드 (0: 정상 접수, 이외의 숫자: 에러)
-   */
-  @IsNumber()
-  @IsNotEmpty()
-  returnCode: number;
-
-  /**
-   * 결과메시지
-   */
-  @IsString()
-  @IsNotEmpty()
-  returnMsg: string;
 }

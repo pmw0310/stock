@@ -6,6 +6,7 @@
 ## 1. 아키텍처 및 역할 (Architecture & Roles)
 - `src/common/`: 프로젝트 전반에서 공통으로 사용되는 모듈 (예: `utils`, `interceptors`)
 - `src/kiwoom/`: 키움증권 REST API 통신 및 비즈니스 로직
+  - **주요 규칙**: 모든 주식 매수/매도 주문 API 호출은 429(Rate Limit) 방지를 위해 반드시 글로벌 주문 큐 서비스인 `KiwoomOrderQueueService`를 경유하여 순차적으로 수행되어야 합니다.
 - `src/telegram/`: 텔레그램 봇 기능, 명령어 핸들링 및 상태 관리 영역
 - `tr_docs/`: 키움 REST API의 TR(Transaction) 명세서 문서 폴더
 
@@ -23,6 +24,7 @@
   - 클래스명: PascalCase (예: `Au10001RequestDto`, `Au10001ResponseDto`)
   - **작성 규칙**: 전역 인터셉터(`SnakeToCamelInterceptor`)에 의해 외부에서 들어오는 스네이크 케이스(Snake Case) 데이터는 자동으로 카멜 케이스(Camel Case)로 변환되며, 응답 시에도 카멜 케이스가 스네이크 케이스로 자동 변환됩니다. 따라서 **DTO 및 서비스 내부의 모든 변수와 프로퍼티는 반드시 카멜 케이스(Camel Case)로만 작성**합니다.
   - **중요**: 요청(Request) DTO와 응답(Response) DTO 클래스를 같은 파일 안에서 명확히 분리하여 정의합니다.
+  - **공통 응답 상속 규칙**: 모든 키움증권 응답 DTO는 `KiwoomBaseResponseDto`([kiwoom-base-response.dto.ts](file:///Users/pmw0310/Documents/workspace/stock/src/kiwoom/dto/kiwoom-base-response.dto.ts))를 상속(`extends`)받아야 하며, 결과코드(`returnCode`)와 결과메시지(`returnMsg`) 속성을 개별 DTO에 중복 선언하지 않습니다. `KiwoomBaseResponseDto` 내부적으로 `@Transform(({ value }) => Number(value))`를 통해 문자열로 수신된 에러코드도 항상 `number` 형식으로 형변환하여 처리합니다.
 - **TR 명세 문서**: `tr_docs/` 하위에 위치
   - 파일명: `[TR번호(소문자)].md` (예: `au10001.md`)
 

@@ -1,4 +1,5 @@
 import { IsString, IsNotEmpty } from 'class-validator';
+import { KiwoomBaseResponseDto } from './kiwoom-base-response.dto';
 
 /**
  * 국내주식 당일거래량상위요청을 위한 DTO 클래스입니다.
@@ -72,8 +73,6 @@ export class Ka10030ResponseItem {
 /**
  * 국내주식 당일거래량상위 응답을 위한 DTO 클래스입니다.
  */
-export class Ka10030ResponseDto {
-  returnCode: number;
-  returnMsg: string;
+export class Ka10030ResponseDto extends KiwoomBaseResponseDto {
   tdyTrdeQtyUpper: Ka10030ResponseItem[];
 }

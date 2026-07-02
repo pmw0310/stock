@@ -1,4 +1,5 @@
-import { IsString, IsNotEmpty, IsNumber, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { KiwoomBaseResponseDto } from './kiwoom-base-response.dto';
 
 /**
  * 키움증권 주식기본정보요청 (ka10001) 요청 DTO 클래스입니다.
@@ -15,7 +16,7 @@ export class Ka10001RequestDto {
 /**
  * 키움증권 주식기본정보요청 (ka10001) 응답 DTO 클래스입니다.
  */
-export class Ka10001ResponseDto {
+export class Ka10001ResponseDto extends KiwoomBaseResponseDto {
   @IsString()
   @IsOptional()
   stkCd?: string;
@@ -195,12 +196,4 @@ export class Ka10001ResponseDto {
   @IsString()
   @IsOptional()
   dstrRt?: string;
-
-  @IsNumber()
-  @IsNotEmpty()
-  returnCode: number;
-
-  @IsString()
-  @IsNotEmpty()
-  returnMsg: string;
 }
