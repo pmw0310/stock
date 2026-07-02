@@ -85,7 +85,8 @@ export class TelegramStateService
   // 예약 관련 상태
   private reservations: Reservation[] = [];
   private nextReservationId = 1;
-  private executeCallback: ((command: string) => Promise<void>) | null = null;
+  private executeCallback:
+    ((command: string, isSilent?: boolean) => Promise<void>) | null = null;
 
   // 익절/손절 퍼센티지 기준 (기본값 null) 및 스탑로스 상태
   private tpr: number | null = null;
@@ -798,9 +799,26 @@ export class TelegramStateService
    * @param callback - 명령어 실행 콜백 함수
    */
   readonly registerExecuteCallback = (
-    callback: (command: string) => Promise<void>,
+    callback: (command: string, isSilent?: boolean) => Promise<void>,
   ): void => {
     this.executeCallback = callback;
+  };
+
+  /**
+   * 등록된 콜백을 사용하여 임의의 명령어를 실행합니다.
+   * @param command - 실행할 명령어 문자열
+   */
+  readonly executeCommand = async (
+    command: string,
+    isSilent = false,
+  ): Promise<void> => {
+    if (this.executeCallback) {
+      await this.executeCallback(command, isSilent);
+    } else {
+      this.logger.warn(
+        'executeCallback이 등록되지 않아 명령어를 실행할 수 없습니다.',
+      );
+    }
   };
 
   /**

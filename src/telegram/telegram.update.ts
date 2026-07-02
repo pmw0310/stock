@@ -134,16 +134,19 @@ export class TelegramUpdate implements OnApplicationBootstrap {
    */
   private readonly executeCommandFromReservation = async (
     command: string,
+    isSilent = false,
   ): Promise<void> => {
     const chatId = this.configService.get<string>('TELEGRAM_CHAT_ID');
     if (!chatId) return;
 
     // 1. 예약에 의해 실행됨을 톡으로 전송
-    await this.bot.telegram.sendMessage(
-      chatId,
-      `⏰ <b>[예약 실행]</b>\n이 명령어는 예약 스케줄러에 의해 자동으로 실행됩니다.\n💬 <b>명령어</b>: <code>${command}</code>`,
-      { parse_mode: 'HTML' },
-    );
+    if (!isSilent) {
+      await this.bot.telegram.sendMessage(
+        chatId,
+        `⏰ <b>[예약 실행]</b>\n이 명령어는 예약 스케줄러에 의해 자동으로 실행됩니다.\n💬 <b>명령어</b>: <code>${command}</code>`,
+        { parse_mode: 'HTML' },
+      );
+    }
 
     // 2. 모의 컨텍스트(Mock Context) 생성
     const mockCtx = {

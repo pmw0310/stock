@@ -6,6 +6,10 @@ import { Ka10032Service } from '@/kiwoom/ka10032.service';
 import { Ka10027Service } from '@/kiwoom/ka10027.service';
 import { Ka10030Service } from '@/kiwoom/ka10030.service';
 import { Ka00198Service } from '@/kiwoom/ka00198.service';
+import { StockRankItem } from '@/kiwoom/dto/ka10032.dto';
+import { Ka10027ResponseItem } from '@/kiwoom/dto/ka10027.dto';
+import { Ka10030ResponseItem } from '@/kiwoom/dto/ka10030.dto';
+import { Ka00198ResponseItem } from '@/kiwoom/dto/ka00198.dto';
 
 /**
  * 텔레그램 봇에서 특정 기준별 상위 20개 종목 순위를 조회하는 명령어('rank')를 처리하는 핸들러 클래스입니다.
@@ -100,7 +104,29 @@ export class RankCommand implements TelegramCommand {
       const useReal = this.stateService.getIsRealTrading();
       const option = parts[1];
 
+      const hasCmd = parts.length >= 5 && parts[2] === 'cmd';
+      let cmdLimit = 20;
+      let cmdTemplate = '';
+      if (hasCmd) {
+        cmdLimit = parseInt(parts[3], 10);
+        if (isNaN(cmdLimit) || cmdLimit <= 0) {
+          await ctx.reply('❌ 개수는 1 이상의 숫자여야 합니다.');
+          return;
+        }
+        cmdTemplate = parts.slice(4).join(' ');
+      }
+
       await ctx.reply('⏳ 순위 데이터를 조회 중입니다...');
+
+      type RankItemType =
+        | StockRankItem
+        | Ka10027ResponseItem
+        | Ka10030ResponseItem
+        | Ka00198ResponseItem;
+      let list: RankItemType[] = [];
+      let formatLine: ((item: RankItemType, idx: number) => string) | null =
+        null;
+      let title = '';
 
       if (option === '1') {
         const response = await this.ka10032Service.getStockRank(
@@ -108,25 +134,19 @@ export class RankCommand implements TelegramCommand {
           { mrktTp: '000', mangStkIncls: '1', stexTp: '3' },
           useReal,
         );
-        const list = response.trdePricaUpper?.slice(0, 20) || [];
-        if (list.length === 0) {
-          await ctx.reply('조회된 데이터가 없습니다.');
-          return;
-        }
-        const lines = list.map((item, idx) => {
+        list = response.trdePricaUpper?.slice(0, hasCmd ? cmdLimit : 20) || [];
+        title = '거래대금 상위 Top';
+        formatLine = (item: RankItemType, idx: number) => {
+          const rankItem = item as StockRankItem;
           const rank = String(idx + 1).padStart(2, '0');
           const curPrc = parseInt(
-            item.curPrc.replace(/^[+-]/, ''),
+            rankItem.curPrc.replace(/^[+-]/, ''),
             10,
           ).toLocaleString();
-          const trdePrica = parseInt(item.trdePrica, 10).toLocaleString();
-          const emoji = this.getTrendEmoji(item.predPreSig);
-          return `${emoji} <b>[${rank}]</b> <b>${item.stkNm}</b> (<code>${item.stkCd}</code>) | <b>${curPrc}원</b> (<code>${item.fluRt}%</code>) | 대금: <code>${trdePrica}백만</code>`;
-        });
-        await ctx.reply(
-          `🏆 <b>거래대금 상위 Top 20</b>\n\n${lines.join('\n')}`,
-          { parse_mode: 'HTML' },
-        );
+          const trdePrica = parseInt(rankItem.trdePrica, 10).toLocaleString();
+          const emoji = this.getTrendEmoji(rankItem.predPreSig);
+          return `${emoji} <b>[${rank}]</b> <b>${rankItem.stkNm}</b> (<code>${rankItem.stkCd}</code>) | <b>${curPrc}원</b> (<code>${rankItem.fluRt}%</code>) | 대금: <code>${trdePrica}백만</code>`;
+        };
       } else if (option === '2') {
         const response = await this.ka10027Service.getStockRank(
           token,
@@ -143,24 +163,20 @@ export class RankCommand implements TelegramCommand {
           },
           useReal,
         );
-        const list = response.predPreFluRtUpper?.slice(0, 20) || [];
-        if (list.length === 0) {
-          await ctx.reply('조회된 데이터가 없습니다.');
-          return;
-        }
-        const lines = list.map((item, idx) => {
+        list =
+          response.predPreFluRtUpper?.slice(0, hasCmd ? cmdLimit : 20) || [];
+        title = '상승률 상위 Top';
+        formatLine = (item: RankItemType, idx: number) => {
+          const rankItem = item as Ka10027ResponseItem;
           const rank = String(idx + 1).padStart(2, '0');
           const curPrc = parseInt(
-            item.curPrc.replace(/^[+-]/, ''),
+            rankItem.curPrc.replace(/^[+-]/, ''),
             10,
           ).toLocaleString();
-          const nowTrdeQty = parseInt(item.nowTrdeQty, 10).toLocaleString();
-          const emoji = this.getTrendEmoji(item.predPreSig);
-          return `${emoji} <b>[${rank}]</b> <b>${item.stkNm}</b> (<code>${item.stkCd}</code>) | <b>${curPrc}원</b> (<code>${item.fluRt}%</code>) | 거래량: <code>${nowTrdeQty}주</code>`;
-        });
-        await ctx.reply(`🏆 <b>상승률 상위 Top 20</b>\n\n${lines.join('\n')}`, {
-          parse_mode: 'HTML',
-        });
+          const nowTrdeQty = parseInt(rankItem.nowTrdeQty, 10).toLocaleString();
+          const emoji = this.getTrendEmoji(rankItem.predPreSig);
+          return `${emoji} <b>[${rank}]</b> <b>${rankItem.stkNm}</b> (<code>${rankItem.stkCd}</code>) | <b>${curPrc}원</b> (<code>${rankItem.fluRt}%</code>) | 거래량: <code>${nowTrdeQty}주</code>`;
+        };
       } else if (option === '3') {
         const response = await this.ka10030Service.getStockRank(
           token,
@@ -177,51 +193,66 @@ export class RankCommand implements TelegramCommand {
           },
           useReal,
         );
-        const list = response.tdyTrdeQtyUpper?.slice(0, 20) || [];
-        if (list.length === 0) {
-          await ctx.reply('조회된 데이터가 없습니다.');
-          return;
-        }
-        const lines = list.map((item, idx) => {
+        list = response.tdyTrdeQtyUpper?.slice(0, hasCmd ? cmdLimit : 20) || [];
+        title = '거래량 상위 Top';
+        formatLine = (item: RankItemType, idx: number) => {
+          const rankItem = item as Ka10030ResponseItem;
           const rank = String(idx + 1).padStart(2, '0');
           const curPrc = parseInt(
-            item.curPrc.replace(/^[+-]/, ''),
+            rankItem.curPrc.replace(/^[+-]/, ''),
             10,
           ).toLocaleString();
-          const trdeQty = parseInt(item.trdeQty, 10).toLocaleString();
-          const emoji = this.getTrendEmoji(item.predPreSig);
-          return `${emoji} <b>[${rank}]</b> <b>${item.stkNm}</b> (<code>${item.stkCd}</code>) | <b>${curPrc}원</b> (<code>${item.fluRt}%</code>) | 거래량: <code>${trdeQty}주</code>`;
-        });
-        await ctx.reply(`🏆 <b>거래량 상위 Top 20</b>\n\n${lines.join('\n')}`, {
-          parse_mode: 'HTML',
-        });
+          const trdeQty = parseInt(rankItem.trdeQty, 10).toLocaleString();
+          const emoji = this.getTrendEmoji(rankItem.predPreSig);
+          return `${emoji} <b>[${rank}]</b> <b>${rankItem.stkNm}</b> (<code>${rankItem.stkCd}</code>) | <b>${curPrc}원</b> (<code>${rankItem.fluRt}%</code>) | 거래량: <code>${trdeQty}주</code>`;
+        };
       } else if (option === '4') {
         const response = await this.ka00198Service.getStockRank(
           token,
           { qryTp: '1' },
           useReal,
         );
-        const list = response.itemInqRank?.slice(0, 20) || [];
-        if (list.length === 0) {
-          await ctx.reply('조회된 데이터가 없습니다.');
-          return;
-        }
-        const lines = list.map((item, idx) => {
+        list = response.itemInqRank?.slice(0, hasCmd ? cmdLimit : 20) || [];
+        title = '인기검색 상위 Top';
+        formatLine = (item: RankItemType, idx: number) => {
+          const rankItem = item as Ka00198ResponseItem;
           const rank = String(idx + 1).padStart(2, '0');
-          const emoji = this.getTrendEmoji(item.baseCompSign);
+          const emoji = this.getTrendEmoji(rankItem.baseCompSign);
           const rankChgText = this.getRankChangeText(
-            item.rankChgSign,
-            item.rankChg,
+            rankItem.rankChgSign,
+            rankItem.rankChg,
           );
-          return `${emoji} <b>[${rank}]</b> <b>${item.stkNm}</b> (<code>${item.stkCd}</code>) | <code>${item.baseCompChgr}%</code> | 순위: <b>${rankChgText}</b>`;
-        });
-        await ctx.reply(
-          `🏆 <b>인기검색 상위 Top 20 (1분 기준)</b>\n\n${lines.join('\n')}`,
-          { parse_mode: 'HTML' },
-        );
+          return `${emoji} <b>[${rank}]</b> <b>${rankItem.stkNm}</b> (<code>${rankItem.stkCd}</code>) | <code>${rankItem.baseCompChgr}%</code> | 순위: <b>${rankChgText}</b>`;
+        };
       } else {
         await ctx.reply(
           '❌ 잘못된 메뉴 번호입니다. 1~4 사이의 번호를 입력해주세요.',
+        );
+        return;
+      }
+
+      if (list.length === 0) {
+        await ctx.reply('조회된 데이터가 없습니다.');
+        return;
+      }
+
+      if (hasCmd) {
+        let executedCount = 0;
+        for (const item of list) {
+          const finalCmd = cmdTemplate.replace(/\(\)/g, item.stkCd);
+          await this.stateService.executeCommand(finalCmd, true);
+          executedCount++;
+        }
+        await ctx.reply(
+          `✅ <b>${executedCount}개 종목</b>에 대해 명령어를 실행했습니다.\n💬 <b>명령어 템플릿</b>: <code>${cmdTemplate}</code>`,
+          { parse_mode: 'HTML' },
+        );
+      } else {
+        const lines = list.map((item, idx) => formatLine(item, idx));
+        const limitText = option === '4' ? ' (1분 기준)' : '';
+        await ctx.reply(
+          `🏆 <b>${title} ${list.length}${limitText}</b>\n\n${lines.join('\n')}`,
+          { parse_mode: 'HTML' },
         );
       }
     } catch (error: unknown) {

@@ -43,6 +43,8 @@ export class HelpCommand implements TelegramCommand {
         '• <code>rank {번호}</code> - 번호에 해당하는 기준의 상위 20개 종목 조회',
         '  (1: 거래대금, 2: 상승률, 3: 거래량, 4: 인기검색)',
         '  (예: <code>rank 2</code>)',
+        '• <code>rank {번호} cmd {개수} {명령}</code> - 순위 결과 종목으로 명령어 일괄 실행',
+        '  (예: <code>rank 4 cmd 15 gdcrs add () 100000</code> - 괄호 부분에 종목코드 치환)',
         '',
         '💸 <b>3. 매수 및 매도 주문</b>',
         '• <code>buy {종목코드} {수량} [지정가]</code> - 주식 매수 주문 (지정가 생략 시 시장가)',
