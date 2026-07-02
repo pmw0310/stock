@@ -18,6 +18,7 @@ import { Kt10001RequestDto } from './dto/kt10001.dto';
 import { Kt00004RequestDto } from './dto/kt00004.dto';
 import { TelegramStateService } from '@/telegram/telegram-state.service';
 import { InjectBot } from 'nestjs-telegraf';
+import { KiwoomOrderQueueService } from './kiwoom-order-queue.service';
 import { Telegraf, Context } from 'telegraf';
 
 interface BalanceItem {
@@ -34,6 +35,7 @@ export class StopLossService implements OnModuleDestroy {
   private readonly logger = new Logger(StopLossService.name);
   private readonly balanceMap = new Map<string, BalanceItem>();
   private wsSubscription?: Subscription;
+  private syncTimeout?: NodeJS.Timeout;
   constructor(
     private readonly kiwoomWebsocketService: KiwoomWebsocketService,
     private readonly kt00004Service: Kt00004Service,
@@ -42,6 +44,7 @@ export class StopLossService implements OnModuleDestroy {
     private readonly telegramStateService: TelegramStateService,
     private readonly configService: ConfigService,
     @InjectBot() private readonly bot: Telegraf<Context>,
+    private readonly kiwoomOrderQueueService: KiwoomOrderQueueService,
   ) {}
 
   onModuleDestroy() {
@@ -134,6 +137,12 @@ export class StopLossService implements OnModuleDestroy {
       this.wsSubscription = undefined;
     }
 
+    // 3. 디바운스 타이머 리소스 정리
+    if (this.syncTimeout) {
+      clearTimeout(this.syncTimeout);
+      this.syncTimeout = undefined;
+    }
+
     this.kiwoomWebsocketService.disconnect();
     this.balanceMap.clear();
     this.logger.log('스탑로스 엔진 리소스 정리 완료 (연결 종료)');
@@ -171,8 +180,11 @@ export class StopLossService implements OnModuleDestroy {
             const existing = this.balanceMap.get(code);
             if (existing) {
               existing.buyPrice = buyPrice;
-              existing.quantity = quantity;
-              existing.isOrdering = false; // 체결 완료 동기화 후 락 해제
+              // 실제 잔고 수량이 변경되었을 때만 주문 락 해제 및 수량 갱신
+              if (existing.quantity !== quantity) {
+                existing.quantity = quantity;
+                existing.isOrdering = false;
+              }
             } else {
               this.balanceMap.set(code, {
                 buyPrice,
@@ -210,6 +222,19 @@ export class StopLossService implements OnModuleDestroy {
   };
 
   /**
+   * 잔고 동기화 요청을 디바운싱 처리합니다.
+   * 체결이 단시간에 집중될 경우 불필요한 API 호출 폭주를 방지합니다.
+   */
+  private readonly syncBalanceWithApiDebounced = (delay = 1000): void => {
+    if (this.syncTimeout) {
+      clearTimeout(this.syncTimeout);
+    }
+    this.syncTimeout = setTimeout(() => {
+      void this.syncBalanceWithApi();
+    }, delay);
+  };
+
+  /**
    * 웹소켓 메시지 처리
    */
   private readonly handleMessage = (message: KiwoomWebsocketMessage): void => {
@@ -222,11 +247,12 @@ export class StopLossService implements OnModuleDestroy {
       if (!item.type || !item.item || !item.values) continue;
 
       if (item.type === '00') {
-        // float promise (async)
-        this.handleOrderExecution(item).catch((err: unknown) => {
+        try {
+          this.handleOrderExecution(item);
+        } catch (err: unknown) {
           const errMsg = err instanceof Error ? err.message : String(err);
           this.logger.error(`주문체결 처리 실패: ${errMsg}`);
-        });
+        }
       } else if (item.type === '0B') {
         this.handleStockExecution(item);
       }
@@ -236,9 +262,7 @@ export class StopLossService implements OnModuleDestroy {
   /**
    * 00 주문체결 데이터 처리 (잔고 동기화)
    */
-  private readonly handleOrderExecution = async (
-    item: KiwoomWebsocketData,
-  ): Promise<void> => {
+  private readonly handleOrderExecution = (item: KiwoomWebsocketData): void => {
     const fid913 = item.values ? item.values['913'] : undefined;
     if (fid913 !== '체결') return; // 체결이 아니면 스킵
 
@@ -254,8 +278,8 @@ export class StopLossService implements OnModuleDestroy {
       `[체결 수신] 종목: ${code}, 구분: ${orderType === '2' ? '매수' : '매도'}, 체결량: ${quantityStr}, 체결가: ${priceStr}`,
     );
 
-    // API 기반 잔고/감시종목 완벽 동기화
-    await this.syncBalanceWithApi();
+    // API 기반 잔고/감시종목 디바운싱 동기화
+    this.syncBalanceWithApiDebounced();
   };
 
   /**
@@ -298,7 +322,18 @@ export class StopLossService implements OnModuleDestroy {
           .catch((err) => this.logger.error(`텔레그램 알림 전송 실패: ${err}`));
       }
 
-      void this.executeSell(code, balance.quantity.toString());
+      void this.kiwoomOrderQueueService.enqueueOrder(
+        () => this.executeSell(code, balance.quantity.toString()),
+        (err) => {
+          this.logger.error(
+            `[스탑로스 큐 매도 실패] 종목: ${code}, 사유: ${err instanceof Error ? err.message : String(err)}`,
+          );
+          const currentBalance = this.balanceMap.get(code);
+          if (currentBalance) {
+            currentBalance.isOrdering = false; // 에러 시 즉시 락 해제
+          }
+        },
+      );
     }
   };
 

@@ -12,6 +12,7 @@ import { Ka00001Service } from '@/kiwoom/ka00001.service';
 import { Ka10027Service } from '@/kiwoom/ka10027.service';
 import { Ka10030Service } from '@/kiwoom/ka10030.service';
 import { Ka00198Service } from '@/kiwoom/ka00198.service';
+import { KiwoomOrderQueueService } from '@/kiwoom/kiwoom-order-queue.service';
 
 /**
  * 키움증권 Open API 모듈입니다.
@@ -32,6 +33,7 @@ import { Ka00198Service } from '@/kiwoom/ka00198.service';
     Ka10027Service,
     Ka10030Service,
     Ka00198Service,
+    KiwoomOrderQueueService,
   ],
   exports: [
     KiwoomService,
@@ -46,6 +48,7 @@ import { Ka00198Service } from '@/kiwoom/ka00198.service';
     Ka10027Service,
     Ka10030Service,
     Ka00198Service,
+    KiwoomOrderQueueService,
   ],
 })
 export class KiwoomModule {}

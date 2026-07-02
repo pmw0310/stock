@@ -3,6 +3,7 @@ import { Context } from 'telegraf';
 import { TelegramCommand } from '@/telegram/commands/command.interface';
 import { TelegramStateService } from '@/telegram/telegram-state.service';
 import { Kt10000Service } from '@/kiwoom/kt10000.service';
+import { KiwoomOrderQueueService } from '@/kiwoom/kiwoom-order-queue.service';
 import { Kt10000RequestDto } from '@/kiwoom/dto/kt10000.dto';
 
 /**
@@ -15,6 +16,7 @@ export class BuyCommand implements TelegramCommand {
   constructor(
     private readonly kt10000Service: Kt10000Service,
     private readonly stateService: TelegramStateService,
+    private readonly kiwoomOrderQueueService: KiwoomOrderQueueService,
   ) {}
 
   /**
@@ -111,10 +113,8 @@ export class BuyCommand implements TelegramCommand {
         trdeTp,
       };
 
-      const response = await this.kt10000Service.buyStock(
-        token,
-        requestDto,
-        useReal,
+      const response = await this.kiwoomOrderQueueService.enqueueOrder(() =>
+        this.kt10000Service.buyStock(token, requestDto, useReal),
       );
 
       if (response.returnCode !== 0) {

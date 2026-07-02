@@ -3,6 +3,7 @@ import { Context } from 'telegraf';
 import { TelegramCommand } from '@/telegram/commands/command.interface';
 import { TelegramStateService } from '@/telegram/telegram-state.service';
 import { Kt10001Service } from '@/kiwoom/kt10001.service';
+import { KiwoomOrderQueueService } from '@/kiwoom/kiwoom-order-queue.service';
 import { Kt00004Service } from '@/kiwoom/kt00004.service';
 import { Kt10001RequestDto } from '@/kiwoom/dto/kt10001.dto';
 
@@ -17,6 +18,7 @@ export class SellCommand implements TelegramCommand {
     private readonly kt10001Service: Kt10001Service,
     private readonly kt00004Service: Kt00004Service,
     private readonly stateService: TelegramStateService,
+    private readonly kiwoomOrderQueueService: KiwoomOrderQueueService,
   ) {}
 
   /**
@@ -138,10 +140,8 @@ export class SellCommand implements TelegramCommand {
         trdeTp: '3', // 시장가 ('3')
       };
 
-      const response = await this.kt10001Service.sellStock(
-        token,
-        requestDto,
-        useReal,
+      const response = await this.kiwoomOrderQueueService.enqueueOrder(() =>
+        this.kt10001Service.sellStock(token, requestDto, useReal),
       );
 
       if (response.returnCode !== 0) {
