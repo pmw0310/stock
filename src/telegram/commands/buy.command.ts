@@ -5,6 +5,7 @@ import { TelegramStateService } from '@/telegram/telegram-state.service';
 import { Kt10000Service } from '@/kiwoom/kt10000.service';
 import { KiwoomOrderQueueService } from '@/kiwoom/kiwoom-order-queue.service';
 import { Kt10000RequestDto } from '@/kiwoom/dto/kt10000.dto';
+import { Ka10001Service } from '@/kiwoom/ka10001.service';
 
 /**
  * 주식 매수주문 명령어('buy {종목코드} {수량} [지정가]')를 처리하는 핸들러 클래스입니다.
@@ -17,6 +18,7 @@ export class BuyCommand implements TelegramCommand {
     private readonly kt10000Service: Kt10000Service,
     private readonly stateService: TelegramStateService,
     private readonly kiwoomOrderQueueService: KiwoomOrderQueueService,
+    private readonly ka10001Service: Ka10001Service,
   ) {}
 
   /**
@@ -40,7 +42,7 @@ export class BuyCommand implements TelegramCommand {
     // 최소 'buy {종목코드} {수량}' 형식이 필요하므로 요소 개수는 최소 3개 이상이어야 합니다.
     if (parts.length < 3) {
       await ctx.reply(
-        '사용법:\n시장가 매수: buy {종목코드} {수량}\n지정가 매수: buy {종목코드} {수량} {지정가}',
+        '사용법:\n시장가 매수: buy {종목코드} {수량}\n지정가 매수: buy {종목코드} {수량} {지정가}\n최대 금액 매수: buy {종목코드} max {금액}',
       );
       return;
     }
@@ -63,29 +65,6 @@ export class BuyCommand implements TelegramCommand {
       return;
     }
 
-    // 수량 유효성 검사
-    const ordQtyNum = Number(qtyStr);
-    if (isNaN(ordQtyNum) || ordQtyNum <= 0 || !Number.isInteger(ordQtyNum)) {
-      await ctx.reply('수량은 1 이상의 정수로 입력해주세요.');
-      return;
-    }
-
-    // 가격 유효성 검사 및 매매구분 설정
-    let ordUvStr = '';
-    let trdeTp: Kt10000RequestDto['trdeTp'] = '3'; // 기본값: 시장가 ('3')
-    let typeName = '시장가';
-
-    if (prcStr) {
-      const priceVal = Number(prcStr);
-      if (isNaN(priceVal) || priceVal <= 0 || !Number.isInteger(priceVal)) {
-        await ctx.reply('지정가는 1 이상의 정수로 입력해주세요.');
-        return;
-      }
-      ordUvStr = String(priceVal);
-      trdeTp = '0'; // 지정가 ('0')
-      typeName = '지정가';
-    }
-
     // 로그인 토큰 획득
     const token = this.stateService.getAccessToken();
     if (!token) {
@@ -97,10 +76,91 @@ export class BuyCommand implements TelegramCommand {
 
     const useReal = this.stateService.getIsRealTrading();
 
+    // 수량 및 가격 파싱, 유효성 검사, 매매구분 설정
+    let ordQtyNum: number;
+    let ordUvStr = '';
+    let trdeTp: Kt10000RequestDto['trdeTp'] = '3'; // 기본값: 시장가 ('3')
+    let maxAmountVal = 0;
+    let curPrcVal = 0;
+
+    const isMax = qtyStr.toLowerCase() === 'max';
+
+    if (isMax) {
+      if (!prcStr) {
+        await ctx.reply('최대 금액 매수 사용법: buy {종목코드} max {금액}');
+        return;
+      }
+      const maxAmount = Number(prcStr);
+      if (isNaN(maxAmount) || maxAmount <= 0 || !Number.isInteger(maxAmount)) {
+        await ctx.reply('금액은 1 이상의 정수로 입력해주세요.');
+        return;
+      }
+      maxAmountVal = maxAmount;
+
+      try {
+        await ctx.reply(`[${stkCd}] 현재가를 조회 중입니다...`);
+        const infoResponse = await this.ka10001Service.getStockInfo(
+          token,
+          { stkCd },
+          useReal,
+        );
+
+        if (infoResponse.returnCode !== 0) {
+          await ctx.reply(`❌ 종목 정보 조회 실패: ${infoResponse.returnMsg}`);
+          return;
+        }
+
+        const curPrcStr = infoResponse.curPrc || '0';
+        const curPrc = Math.abs(Number(curPrcStr));
+        curPrcVal = curPrc;
+
+        if (curPrc <= 0) {
+          await ctx.reply(`❌ 유효하지 않은 현재가입니다.`);
+          return;
+        }
+
+        ordQtyNum = Math.floor(maxAmount / curPrc);
+
+        if (ordQtyNum <= 0) {
+          await ctx.reply(
+            `❌ 입력하신 금액(${maxAmount.toLocaleString()}원)이 현재가(${curPrc.toLocaleString()}원)보다 작아 매수할 수 없습니다.`,
+          );
+          return;
+        }
+      } catch (error) {
+        this.logger.error(
+          `[실패] 현재가 조회 중 오류 발생`,
+          error instanceof Error ? error.stack : error,
+        );
+        await ctx.reply(`현재가 조회 중 오류가 발생하였습니다.`);
+        return;
+      }
+    } else {
+      ordQtyNum = Number(qtyStr);
+      if (isNaN(ordQtyNum) || ordQtyNum <= 0 || !Number.isInteger(ordQtyNum)) {
+        await ctx.reply(
+          '수량은 1 이상의 정수로 입력하거나 "max"를 입력해주세요.',
+        );
+        return;
+      }
+
+      if (prcStr) {
+        const priceVal = Number(prcStr);
+        if (isNaN(priceVal) || priceVal <= 0 || !Number.isInteger(priceVal)) {
+          await ctx.reply('지정가는 1 이상의 정수로 입력해주세요.');
+          return;
+        }
+        ordUvStr = String(priceVal);
+        trdeTp = '0'; // 지정가 ('0')
+      }
+    }
+
     try {
-      const orderTypeDesc = prcStr
-        ? `${Number(prcStr).toLocaleString()}원 지정가`
-        : '시장가';
+      const orderTypeDesc = isMax
+        ? `최대 금액(한도: ${maxAmountVal.toLocaleString()}원, 현재가: ${curPrcVal.toLocaleString()}원)`
+        : prcStr
+          ? `${Number(prcStr).toLocaleString()}원 지정가`
+          : '시장가';
       await ctx.reply(
         `[${stkCd}] 종목을 ${ordQtyNum}주 ${orderTypeDesc}로 매수 주문 중입니다...`,
       );
@@ -122,12 +182,18 @@ export class BuyCommand implements TelegramCommand {
         return;
       }
 
+      const typeDesc = isMax
+        ? `최대 금액 (한도: ${maxAmountVal.toLocaleString()}원, 현재가: ${curPrcVal.toLocaleString()}원)`
+        : prcStr
+          ? `지정가 (${Number(prcStr).toLocaleString()}원)`
+          : '시장가';
+
       const msg = `
 ✅ <b>주식 매수 주문 완료</b>
 ━━━━━━━━━━━━━━━━
 📌 <b>종목코드</b>: ${stkCd}
 📦 <b>주문수량</b>: ${ordQtyNum.toLocaleString()}주
-💰 <b>주문구분</b>: ${typeName} ${prcStr ? `(${Number(prcStr).toLocaleString()}원)` : ''}
+💰 <b>주문구분</b>: ${typeDesc}
 🔢 <b>주문번호</b>: ${response.ordNo || 'N/A'}
 ━━━━━━━━━━━━━━━━
 접수가 완료되었습니다.
@@ -135,7 +201,7 @@ export class BuyCommand implements TelegramCommand {
 
       await ctx.reply(msg, { parse_mode: 'HTML' });
       this.logger.log(
-        `[성공] 매수 주문 완료. 종목: ${stkCd}, 수량: ${ordQtyNum}, 구분: ${typeName}`,
+        `[성공] 매수 주문 완료. 종목: ${stkCd}, 수량: ${ordQtyNum}, 구분: ${typeDesc}`,
       );
     } catch (error: unknown) {
       this.logger.error(

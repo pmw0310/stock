@@ -31,6 +31,7 @@
 ### 2.2. 텔레그램 봇 (Telegram Domain)
 
 - **명령어 처리기 (Commands)**: `src/telegram/commands/` 하위에 개별 봇 명령어(Command)별로 파일을 분리하여 구현합니다.
+  - **도움말 갱신 의무**: `src/telegram/commands/` 폴더 내에 봇 명령어 관련 기능을 추가하거나 기존 명령어를 변경하는 경우, 반드시 `src/telegram/commands/help.command.ts` 파일 내의 도움말 안내 메시지도 동일하게 수정해야 합니다.
 - **상태 관리**: 사용자 세션, 인증 상태 등은 `telegram-state.service.ts`에서 관리합니다.
 - **이벤트/메시지 수신**: 텔레그램에서 들어오는 웹훅/폴링 업데이트 처리는 `telegram.update.ts`에서 담당합니다.
 

@@ -47,6 +47,8 @@ export class HelpCommand implements TelegramCommand {
         '💸 <b>3. 매수 및 매도 주문</b>',
         '• <code>buy {종목코드} {수량} [지정가]</code> - 주식 매수 주문 (지정가 생략 시 시장가)',
         '  (예: <code>buy 005930 5</code> 또는 <code>buy 005930 5 60000</code>)',
+        '• <code>buy {종목코드} max {금액}</code> - 지정한 최대 금액 내에서 시장가 매수',
+        '  (예: <code>buy 005930 max 500000</code>)',
         '• <code>sell {종목코드} {수량}</code> - 보유한 주식 매도 주문',
         '  (예: <code>sell 005930 3</code>)',
         '',
