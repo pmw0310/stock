@@ -16,7 +16,7 @@ import * as https from 'https';
     ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: ['.env.local', '.env'],
     }),
     TelegrafModule.forRootAsync({
       imports: [ConfigModule],

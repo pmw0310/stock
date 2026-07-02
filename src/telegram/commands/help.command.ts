@@ -60,6 +60,8 @@ export class HelpCommand implements TelegramCommand {
         '  (예: <code>tpr 5</code>)',
         '• <code>slr {손절기준}</code> - 손절 기준 퍼센티지 설정 (양수/음수 입력 시 항상 음수로 저장)',
         '  (예: <code>slr 10</code> 또는 <code>slr -10</code>)',
+        '• <code>gdcrs intv {단기} {장기}</code> - 골든크로스/데드크로스 단기/장기 분봉 값 설정 (1~60 사이 정수)',
+        '  (예: <code>gdcrs intv 5 20</code>)',
         '• <code>rsv {시간} {명령어}</code> - 평일 매일 해당 시간에 명령어 예약 실행',
         '  (예: <code>rsv 09:00 report</code>)',
         '• <code>rsv once {시간} {명령어}</code> - 1회성 명령어 예약 실행',

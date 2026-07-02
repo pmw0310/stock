@@ -17,6 +17,7 @@ import { TprCommand } from '@/telegram/commands/tpr.command';
 import { SlrCommand } from '@/telegram/commands/slr.command';
 import { StlsCommand } from '@/telegram/commands/stls.command';
 import { RankCommand } from '@/telegram/commands/rank.command';
+import { GdcrsCommand } from '@/telegram/commands/gdcrs.command';
 import { StopLossService } from '@/kiwoom/stop-loss.service';
 
 /**
@@ -42,6 +43,7 @@ import { StopLossService } from '@/kiwoom/stop-loss.service';
     SlrCommand,
     StlsCommand,
     RankCommand,
+    GdcrsCommand,
     StopLossService,
   ],
 })

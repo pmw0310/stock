@@ -42,6 +42,8 @@ interface StateData {
   tpr?: number | null;
   slr?: number | null;
   isStopLossRunning?: boolean;
+  gdcrsShort?: number;
+  gdcrsLong?: number;
 }
 
 /**
@@ -80,6 +82,10 @@ export class TelegramStateService
   private slr: number | null = null;
   private isStopLossRunning = false;
 
+  // 골든크로스/데드크로스 분봉 값 상태 (기본값 5, 20)
+  private gdcrsShort = 5;
+  private gdcrsLong = 20;
+
   constructor(
     private readonly configService: ConfigService,
     private readonly au10001Service: Au10001Service,
@@ -108,6 +114,8 @@ export class TelegramStateService
         tpr: this.tpr,
         slr: this.slr,
         isStopLossRunning: this.isStopLossRunning,
+        gdcrsShort: this.gdcrsShort,
+        gdcrsLong: this.gdcrsLong,
       };
       fs.writeFileSync(
         this.stateFilePath,
@@ -151,7 +159,9 @@ export class TelegramStateService
     if (fileData.renewalHour !== undefined && fileData.renewalHour !== null) {
       this.renewalHour = fileData.renewalHour;
     } else {
-      const envHour = this.configService.get<string>('TOKEN_RENEWAL_HOUR');
+      const envHour = this.configService.get<string>(
+        'DEFAULT_TOKEN_RENEWAL_HOUR',
+      );
       this.renewalHour = envHour !== undefined ? parseInt(envHour, 10) : 8;
       if (isNaN(this.renewalHour)) {
         this.renewalHour = 8;
@@ -165,7 +175,9 @@ export class TelegramStateService
     ) {
       this.renewalMinute = fileData.renewalMinute;
     } else {
-      const envMinute = this.configService.get<string>('TOKEN_RENEWAL_MINUTE');
+      const envMinute = this.configService.get<string>(
+        'DEFAULT_TOKEN_RENEWAL_MINUTE',
+      );
       this.renewalMinute =
         envMinute !== undefined ? parseInt(envMinute, 10) : 55;
       if (isNaN(this.renewalMinute)) {
@@ -181,7 +193,7 @@ export class TelegramStateService
       this.marketStartTime = fileData.marketStartTime;
     } else {
       this.marketStartTime =
-        this.configService.get<string>('MARKET_START_TIME') ?? '09:00';
+        this.configService.get<string>('DEFAULT_MARKET_START_TIME') ?? '09:00';
     }
 
     // 2.5 장 종료 시간 복원
@@ -192,7 +204,7 @@ export class TelegramStateService
       this.marketEndTime = fileData.marketEndTime;
     } else {
       this.marketEndTime =
-        this.configService.get<string>('MARKET_END_TIME') ?? '15:30';
+        this.configService.get<string>('DEFAULT_MARKET_END_TIME') ?? '15:30';
     }
 
     // 2.6 예약 데이터 복원
@@ -221,6 +233,23 @@ export class TelegramStateService
 
     // 2.8 스탑로스 상태 복원
     this.isStopLossRunning = fileData.isStopLossRunning ?? false;
+
+    // 2.9 골든/데드크로스 분봉 설정 복원 (state.json -> .env -> 기본값 5, 20)
+    if (fileData.gdcrsShort !== undefined && fileData.gdcrsShort !== null) {
+      this.gdcrsShort = fileData.gdcrsShort;
+    } else {
+      const envShort = this.configService.get<string>('DEFAULT_GDCRS_SHORT');
+      const parsedShort = envShort !== undefined ? parseInt(envShort, 10) : 5;
+      this.gdcrsShort = isNaN(parsedShort) ? 5 : parsedShort;
+    }
+
+    if (fileData.gdcrsLong !== undefined && fileData.gdcrsLong !== null) {
+      this.gdcrsLong = fileData.gdcrsLong;
+    } else {
+      const envLong = this.configService.get<string>('DEFAULT_GDCRS_LONG');
+      const parsedLong = envLong !== undefined ? parseInt(envLong, 10) : 20;
+      this.gdcrsLong = isNaN(parsedLong) ? 20 : parsedLong;
+    }
 
     // 3. 로드된 최신 상태를 state.json에 즉시 다시 써서 일치시킴
     this.saveState();
@@ -591,22 +620,26 @@ export class TelegramStateService
   readonly resetToDefault = (): void => {
     this.isRealTrading = false;
 
-    const envHour = this.configService.get<string>('TOKEN_RENEWAL_HOUR');
+    const envHour = this.configService.get<string>(
+      'DEFAULT_TOKEN_RENEWAL_HOUR',
+    );
     this.renewalHour = envHour !== undefined ? parseInt(envHour, 10) : 8;
     if (isNaN(this.renewalHour)) {
       this.renewalHour = 8;
     }
 
-    const envMinute = this.configService.get<string>('TOKEN_RENEWAL_MINUTE');
+    const envMinute = this.configService.get<string>(
+      'DEFAULT_TOKEN_RENEWAL_MINUTE',
+    );
     this.renewalMinute = envMinute !== undefined ? parseInt(envMinute, 10) : 55;
     if (isNaN(this.renewalMinute)) {
       this.renewalMinute = 55;
     }
 
     this.marketStartTime =
-      this.configService.get<string>('MARKET_START_TIME') ?? '09:00';
+      this.configService.get<string>('DEFAULT_MARKET_START_TIME') ?? '09:00';
     this.marketEndTime =
-      this.configService.get<string>('MARKET_END_TIME') ?? '15:30';
+      this.configService.get<string>('DEFAULT_MARKET_END_TIME') ?? '15:30';
 
     const envTpr = this.configService.get<string>('DEFAULT_TPR');
     const parsedTpr = envTpr !== undefined ? parseFloat(envTpr) : 5;
@@ -615,6 +648,14 @@ export class TelegramStateService
     const envSlr = this.configService.get<string>('DEFAULT_SLR');
     const parsedSlr = envSlr !== undefined ? parseFloat(envSlr) : -5;
     this.slr = isNaN(parsedSlr) ? -5 : -Math.abs(parsedSlr);
+
+    const envShort = this.configService.get<string>('DEFAULT_GDCRS_SHORT');
+    const parsedShort = envShort !== undefined ? parseInt(envShort, 10) : 5;
+    this.gdcrsShort = isNaN(parsedShort) ? 5 : parsedShort;
+
+    const envLong = this.configService.get<string>('DEFAULT_GDCRS_LONG');
+    const parsedLong = envLong !== undefined ? parseInt(envLong, 10) : 20;
+    this.gdcrsLong = isNaN(parsedLong) ? 20 : parsedLong;
 
     this.saveState();
 
@@ -639,6 +680,8 @@ export class TelegramStateService
       tpr: this.tpr,
       slr: this.slr,
       isStopLossRunning: this.isStopLossRunning,
+      gdcrsShort: this.gdcrsShort,
+      gdcrsLong: this.gdcrsLong,
     };
   };
 
@@ -684,6 +727,33 @@ export class TelegramStateService
    */
   readonly getSlr = (): number | null => {
     return this.slr;
+  };
+
+  /**
+   * 골든크로스/데드크로스 단기 분봉 값을 반환합니다.
+   * @returns 단기 분봉 값
+   */
+  readonly getGdcrsShort = (): number => {
+    return this.gdcrsShort;
+  };
+
+  /**
+   * 골든크로스/데드크로스 장기 분봉 값을 반환합니다.
+   * @returns 장기 분봉 값
+   */
+  readonly getGdcrsLong = (): number => {
+    return this.gdcrsLong;
+  };
+
+  /**
+   * 골든크로스/데드크로스 단기 및 장기 분봉 값을 설정하고 영속화합니다.
+   * @param shortVal - 단기 값
+   * @param longVal - 장기 값
+   */
+  readonly setGdcrsIntervals = (shortVal: number, longVal: number): void => {
+    this.gdcrsShort = shortVal;
+    this.gdcrsLong = longVal;
+    this.saveState();
   };
 
   /**

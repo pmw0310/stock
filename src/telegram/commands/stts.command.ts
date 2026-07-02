@@ -57,6 +57,7 @@ export class SttsCommand implements TelegramCommand {
         `• 장 종료 시간: ${safeState.marketEndTime}`,
         `• 익절 기준: ${formattedTpr}`,
         `• 손절 기준: ${formattedSlr}`,
+        `• 골든/데드 분봉: 단기 ${safeState.gdcrsShort ?? 5} / 장기 ${safeState.gdcrsLong ?? 20}`,
       ].join('\n');
 
       await ctx.reply(message);
