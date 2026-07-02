@@ -7,6 +7,7 @@ import { KiwoomChartQueueService } from './kiwoom-chart-queue.service';
 import { ConfigService } from '@nestjs/config';
 import { InjectBot } from 'nestjs-telegraf';
 import { Telegraf, Context } from 'telegraf';
+import { MarketService } from '@/kiwoom/market.service';
 
 /**
  * 데드크로스 실시간 감시 및 자동 매도 스케줄러 서비스입니다.
@@ -28,6 +29,7 @@ export class DdcrsService {
     private readonly kiwoomChartQueueService: KiwoomChartQueueService,
     private readonly configService: ConfigService,
     @InjectBot() private readonly bot: Telegraf<Context>,
+    private readonly marketService: MarketService,
   ) {}
 
   /**
@@ -216,23 +218,6 @@ export class DdcrsService {
    * @returns 장 운영 시간 여부
    */
   private readonly isMarketOpen = (): boolean => {
-    const now = new Date();
-
-    // 주말 체크
-    const day = now.getDay();
-    if (day === 0 || day === 6) return false;
-
-    const startStr = this.telegramStateService.getMarketStartTime(); // e.g. "09:00"
-    const endStr = this.telegramStateService.getMarketEndTime(); // e.g. "15:30"
-
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-    const [startHour, startMinute] = startStr.split(':').map(Number);
-    const [endHour, endMinute] = endStr.split(':').map(Number);
-
-    const startMins = startHour * 60 + startMinute;
-    const endMins = endHour * 60 + endMinute;
-
-    return currentMinutes >= startMins && currentMinutes <= endMins;
+    return this.marketService.isMarketOpen();
   };
 }

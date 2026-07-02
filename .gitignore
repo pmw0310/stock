@@ -41,3 +41,6 @@ Thumbs.db
 
 # State Persistence
 state.json
+
+# Holidays Persistence
+holidays.json

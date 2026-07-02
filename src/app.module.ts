@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { KiwoomModule } from '@/kiwoom/kiwoom.module';
 import { TelegrafModule } from 'nestjs-telegraf';
 import { TelegramModule } from '@/telegram/telegram.module';
+import { HolidayModule } from '@/holiday/holiday.module';
 import * as https from 'https';
 
 /**
@@ -36,6 +37,7 @@ import * as https from 'https';
     HttpModule,
     KiwoomModule,
     TelegramModule,
+    HolidayModule,
   ],
   controllers: [],
   providers: [],

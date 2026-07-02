@@ -23,11 +23,14 @@ import { GdcrsService } from '@/kiwoom/gdcrs.service';
 import { DdcrsCommand } from '@/telegram/commands/ddcrs.command';
 import { DdcrsService } from '@/kiwoom/ddcrs.service';
 
+import { HolidayModule } from '@/holiday/holiday.module';
+import { MarketService } from '@/kiwoom/market.service';
+
 /**
  * 텔레그램 봇 관련 기능을 제공하는 모듈입니다.
  */
 @Module({
-  imports: [KiwoomModule],
+  imports: [KiwoomModule, HolidayModule],
   providers: [
     TelegramUpdate,
     TelegramStateService,
@@ -51,6 +54,7 @@ import { DdcrsService } from '@/kiwoom/ddcrs.service';
     StopLossService,
     GdcrsService,
     DdcrsService,
+    MarketService,
   ],
 })
 export class TelegramModule {}

@@ -8,6 +8,8 @@
 - `src/kiwoom/`: 키움증권 REST API 통신 및 비즈니스 로직
   - **주요 규칙**: 모든 주식 매수/매도 주문 API 호출은 429(Rate Limit) 방지를 위해 반드시 글로벌 주문 큐 서비스인 `KiwoomOrderQueueService`를 경유하여 순차적으로 수행되어야 합니다.
 - `src/telegram/`: 텔레그램 봇 기능, 명령어 핸들링 및 상태 관리 영역
+- `src/holiday/`: 공공데이터포털 연동을 통한 공휴일 데이터 조회 및 캐싱 서비스 제공 영역
+  - **주요 규칙**: 공휴일 데이터는 `DATA_GO_KEY` 환경변수를 통해 API 연동되며, 인메모리 캐싱과 매월 1일 자정 스케줄러 동기화(`@Cron`)를 활용합니다. API 응답의 XML->JSON 파싱 시 0건/1건/여러 건 데이터에 대응하기 위해 반드시 `ensureArray` 유틸리티를 적용하여 배열 포맷으로 정규화해야 합니다.
 - `tr_docs/`: 키움 REST API의 TR(Transaction) 명세서 문서 폴더
 
 ## 2. 명명 및 파일 작성 규칙 (Naming & File Conventions)
@@ -40,6 +42,15 @@
 - `src/common/utils/` 하위에 도메인 종속성이 없는 순수 함수 위주로 작성합니다.
 - 파일명: `[기능명].util.ts`
 - **구현 방식**: 일반 함수 선언(`function() {}`) 대신, 반드시 **화살표 함수(`const func = () => {}`)**를 사용하여 구현합니다.
+
+### 2.4. 공휴일 API (Holiday Domain)
+
+- **서비스 (Service)**: `src/holiday/` 하위에 위치
+  - 파일명: `holiday.service.ts`
+  - 클래스명: `HolidayService`
+- **DTO (Data Transfer Object)**: `src/holiday/dto/` 하위에 위치
+  - 파일명: `holiday.dto.ts`
+  - 클래스명: `HolidayItemDto`, `HolidayBodyDto`, `HolidayHeaderDto`, `HolidayResponseDto`
 
 ## 3. 테스트 규칙 (Testing Rules)
 
