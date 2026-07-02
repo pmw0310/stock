@@ -28,6 +28,15 @@ export interface Reservation {
 }
 
 /**
+ * 골든크로스 감시 대상 주식 정보 인터페이스입니다.
+ */
+export interface GoldenCrossStock {
+  code: string;
+  price: number;
+  name?: string;
+}
+
+/**
  * 파일에 저장되는 상태 데이터 구조 정의 인터페이스입니다.
  */
 interface StateData {
@@ -44,6 +53,7 @@ interface StateData {
   isStopLossRunning?: boolean;
   gdcrsShort?: number;
   gdcrsLong?: number;
+  gdcrsStocks?: GoldenCrossStock[];
 }
 
 /**
@@ -86,6 +96,9 @@ export class TelegramStateService
   private gdcrsShort = 5;
   private gdcrsLong = 20;
 
+  // 골든크로스 감시 대상 종목 목록 상태
+  private gdcrsStocks: GoldenCrossStock[] = [];
+
   constructor(
     private readonly configService: ConfigService,
     private readonly au10001Service: Au10001Service,
@@ -116,6 +129,7 @@ export class TelegramStateService
         isStopLossRunning: this.isStopLossRunning,
         gdcrsShort: this.gdcrsShort,
         gdcrsLong: this.gdcrsLong,
+        gdcrsStocks: this.gdcrsStocks,
       };
       fs.writeFileSync(
         this.stateFilePath,
@@ -250,6 +264,9 @@ export class TelegramStateService
       const parsedLong = envLong !== undefined ? parseInt(envLong, 10) : 20;
       this.gdcrsLong = isNaN(parsedLong) ? 20 : parsedLong;
     }
+
+    // 2.10 골든크로스 감시 종목 목록 복원
+    this.gdcrsStocks = fileData.gdcrsStocks ?? [];
 
     // 3. 로드된 최신 상태를 state.json에 즉시 다시 써서 일치시킴
     this.saveState();
@@ -657,6 +674,8 @@ export class TelegramStateService
     const parsedLong = envLong !== undefined ? parseInt(envLong, 10) : 20;
     this.gdcrsLong = isNaN(parsedLong) ? 20 : parsedLong;
 
+    this.gdcrsStocks = [];
+
     this.saveState();
 
     this.clearRenewalTimeout();
@@ -682,6 +701,7 @@ export class TelegramStateService
       isStopLossRunning: this.isStopLossRunning,
       gdcrsShort: this.gdcrsShort,
       gdcrsLong: this.gdcrsLong,
+      gdcrsStocks: this.gdcrsStocks,
     };
   };
 
@@ -961,5 +981,60 @@ export class TelegramStateService
     } else {
       this.logger.warn('예약 실행 콜백이 등록되지 않았습니다.');
     }
+  };
+
+  /**
+   * 골든크로스 감시 대상 종목을 추가하거나, 이미 존재할 경우 정보를 갱신합니다.
+   * @param code - 종목코드
+   * @param price - 감시할 기준 금액
+   * @param name - 종목명 (선택사항)
+   */
+  readonly addGdcrsStock = (
+    code: string,
+    price: number,
+    name?: string,
+  ): void => {
+    const existingIndex = this.gdcrsStocks.findIndex((s) => s.code === code);
+    if (existingIndex !== -1) {
+      this.gdcrsStocks[existingIndex] = {
+        code,
+        price,
+        name: name ?? this.gdcrsStocks[existingIndex].name,
+      };
+      this.logger.log(
+        `[골든크로스] 기존 종목 정보 갱신: ${code} - ${price}원 (${name ?? '이름 없음'})`,
+      );
+    } else {
+      this.gdcrsStocks.push({ code, price, name });
+      this.logger.log(
+        `[골든크로스] 신규 종목 추가: ${code} - ${price}원 (${name ?? '이름 없음'})`,
+      );
+    }
+    this.saveState();
+  };
+
+  /**
+   * 골든크로스 감시 대상 종목을 목록 내 순서(0-based index)로 삭제합니다.
+   * @param index - 삭제할 대상의 0-based index
+   * @returns 삭제 성공 여부
+   */
+  readonly removeGdcrsStockByIndex = (index: number): boolean => {
+    if (index < 0 || index >= this.gdcrsStocks.length) {
+      return false;
+    }
+    const removed = this.gdcrsStocks.splice(index, 1);
+    this.logger.log(
+      `[골든크로스] 종목 삭제: ${removed[0].code} - ${removed[0].price}원`,
+    );
+    this.saveState();
+    return true;
+  };
+
+  /**
+   * 현재 등록되어 있는 골든크로스 감시 종목 목록을 반환합니다.
+   * @returns 골든크로스 감시 종목 목록 배열
+   */
+  readonly getGdcrsStocks = (): GoldenCrossStock[] => {
+    return [...this.gdcrsStocks];
   };
 }
