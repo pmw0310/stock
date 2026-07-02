@@ -21,7 +21,7 @@ import { RankCommand } from '@/telegram/commands/rank.command';
 import { GdcrsCommand } from '@/telegram/commands/gdcrs.command';
 import { DdcrsCommand } from '@/telegram/commands/ddcrs.command';
 import { TelegramCommand } from '@/telegram/commands/command.interface';
-import { ExtraReplyMessage } from 'node_modules/telegraf/typings/telegram-types';
+import { Convenience } from 'telegraf/types';
 
 /**
  * 텔레그램 봇의 메시지를 수신하여 권한을 확인한 뒤 각 명령어 처리기로 위임하는 업데이트 클래스입니다.
@@ -154,7 +154,7 @@ export class TelegramUpdate implements OnApplicationBootstrap {
     // 2. 모의 컨텍스트(Mock Context) 생성
     const mockCtx = {
       chat: { id: parseInt(chatId, 10), type: 'private' },
-      reply: async (text: string, extra?: ExtraReplyMessage) => {
+      reply: async (text: string, extra?: Convenience.ExtraReplyMessage) => {
         return this.bot.telegram.sendMessage(chatId, text, extra);
       },
     } as unknown as Context;

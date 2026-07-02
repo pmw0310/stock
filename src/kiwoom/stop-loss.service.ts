@@ -372,7 +372,9 @@ export class StopLossService implements OnModuleDestroy {
     };
 
     try {
-      const res = await this.kt10001Service.sellStock(token, data, useReal);
+      const res = await this.kiwoomOrderQueueService.enqueueOrder(() =>
+        this.kt10001Service.sellStock(token, data, useReal),
+      );
       if (res.returnCode === 0) {
         this.logger.log(`매도 주문 전송 성공: ${code}, 수량: ${quantity}`);
         if (chatId) {

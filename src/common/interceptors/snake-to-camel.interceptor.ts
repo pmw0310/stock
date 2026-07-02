@@ -14,7 +14,7 @@ import { toCamelCase, toSnakeCase } from '@/common/utils/case-converter.util';
  */
 @Injectable()
 export class SnakeToCamelInterceptor implements NestInterceptor {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context
       .switchToHttp()
       .getRequest<Record<string, unknown>>();
