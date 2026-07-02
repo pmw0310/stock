@@ -51,6 +51,8 @@ interface StateData {
   tpr?: number | null;
   slr?: number | null;
   isStopLossRunning?: boolean;
+  isGdcrsRunning?: boolean;
+  isDdcrsRunning?: boolean;
   gdcrsShort?: number;
   gdcrsLong?: number;
   gdcrsStocks?: GoldenCrossStock[];
@@ -92,6 +94,8 @@ export class TelegramStateService
   private tpr: number | null = null;
   private slr: number | null = null;
   private isStopLossRunning = false;
+  private isGdcrsRunning = false;
+  private isDdcrsRunning = false;
 
   // 골든크로스/데드크로스 분봉 값 상태 (기본값 5, 20)
   private gdcrsShort = 5;
@@ -128,6 +132,8 @@ export class TelegramStateService
         tpr: this.tpr,
         slr: this.slr,
         isStopLossRunning: this.isStopLossRunning,
+        isGdcrsRunning: this.isGdcrsRunning,
+        isDdcrsRunning: this.isDdcrsRunning,
         gdcrsShort: this.gdcrsShort,
         gdcrsLong: this.gdcrsLong,
         gdcrsStocks: this.gdcrsStocks,
@@ -246,8 +252,10 @@ export class TelegramStateService
       this.slr = isNaN(parsedSlr) ? -5 : -Math.abs(parsedSlr);
     }
 
-    // 2.8 스탑로스 상태 복원
+    // 2.8 스탑로스 및 골든크로스 상태 복원
     this.isStopLossRunning = fileData.isStopLossRunning ?? false;
+    this.isGdcrsRunning = fileData.isGdcrsRunning ?? false;
+    this.isDdcrsRunning = fileData.isDdcrsRunning ?? false;
 
     // 2.9 골든/데드크로스 분봉 설정 복원 (state.json -> .env -> 기본값 5, 20)
     if (fileData.gdcrsShort !== undefined && fileData.gdcrsShort !== null) {
@@ -299,7 +307,7 @@ export class TelegramStateService
 
   /**
    * 애플리케이션 시작 시 호출되어 시작 알림을 전송하고 모의투자 로그인을 자동으로 수행합니다.
-   * 단, 핫 리로드(코드 변경으로 인한 재시작) 시에는 자동 로그인을 건너뜁니다.
+   * 단, 핫 리로드(코드 변경으로 인한 재시작) 시에는 자동 로그인을 건너뜂니다.
    */
   onApplicationBootstrap = async (): Promise<void> => {
     const chatId = this.configService.get<string>('TELEGRAM_CHAT_ID');
@@ -700,6 +708,8 @@ export class TelegramStateService
       tpr: this.tpr,
       slr: this.slr,
       isStopLossRunning: this.isStopLossRunning,
+      isGdcrsRunning: this.isGdcrsRunning,
+      isDdcrsRunning: this.isDdcrsRunning,
       gdcrsShort: this.gdcrsShort,
       gdcrsLong: this.gdcrsLong,
       gdcrsStocks: this.gdcrsStocks,
@@ -1002,6 +1012,40 @@ export class TelegramStateService
   };
 
   /**
+   * 골든크로스 감시 실행 여부를 설정하고 영속화합니다.
+   * @param isRunning - 감시 실행 여부
+   */
+  readonly setIsGdcrsRunning = (isRunning: boolean): void => {
+    this.isGdcrsRunning = isRunning;
+    this.saveState();
+  };
+
+  /**
+   * 골든크로스 감시 실행 여부를 반환합니다.
+   * @returns 감시 실행 여부
+   */
+  readonly getIsGdcrsRunning = (): boolean => {
+    return this.isGdcrsRunning;
+  };
+
+  /**
+   * 데드크로스 감시 실행 여부를 반환합니다.
+   * @returns 데드크로스 감시 활성화 여부
+   */
+  readonly getIsDdcrsRunning = (): boolean => {
+    return this.isDdcrsRunning;
+  };
+
+  /**
+   * 데드크로스 감시 실행 여부를 설정하고 저장합니다.
+   * @param isRunning - 활성화 여부
+   */
+  readonly setIsDdcrsRunning = (isRunning: boolean): void => {
+    this.isDdcrsRunning = isRunning;
+    this.saveState();
+  };
+
+  /**
    * 골든크로스 감시 대상 종목을 추가하거나, 이미 존재할 경우 정보를 갱신합니다.
    * @param code - 종목코드
    * @param price - 감시할 기준 금액
@@ -1046,6 +1090,18 @@ export class TelegramStateService
     );
     this.saveState();
     return true;
+  };
+
+  /**
+   * 골든크로스 감시 대상 종목을 모두 삭제합니다.
+   * @returns 삭제된 종목의 개수
+   */
+  readonly removeAllGdcrsStocks = (): number => {
+    const count = this.gdcrsStocks.length;
+    this.gdcrsStocks = [];
+    this.logger.log(`[골든크로스] 모든 종목 삭제 완료 (총 ${count}개)`);
+    this.saveState();
+    return count;
   };
 
   /**

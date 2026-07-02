@@ -19,6 +19,9 @@ import { StlsCommand } from '@/telegram/commands/stls.command';
 import { RankCommand } from '@/telegram/commands/rank.command';
 import { GdcrsCommand } from '@/telegram/commands/gdcrs.command';
 import { StopLossService } from '@/kiwoom/stop-loss.service';
+import { GdcrsService } from '@/kiwoom/gdcrs.service';
+import { DdcrsCommand } from '@/telegram/commands/ddcrs.command';
+import { DdcrsService } from '@/kiwoom/ddcrs.service';
 
 /**
  * 텔레그램 봇 관련 기능을 제공하는 모듈입니다.
@@ -44,7 +47,10 @@ import { StopLossService } from '@/kiwoom/stop-loss.service';
     StlsCommand,
     RankCommand,
     GdcrsCommand,
+    DdcrsCommand,
     StopLossService,
+    GdcrsService,
+    DdcrsService,
   ],
 })
 export class TelegramModule {}

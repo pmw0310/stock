@@ -22,7 +22,12 @@ export class GdcrsCommand implements TelegramCommand {
    * @returns 처리 가능 여부
    */
   readonly canHandle = (command: string): boolean => {
-    return command === 'gdcrs' || command.startsWith('gdcrs ');
+    return (
+      command === 'gdcrs' ||
+      command.startsWith('gdcrs ') ||
+      command === 'start gdcrs' ||
+      command === 'stop gdcrs'
+    );
   };
 
   /**
@@ -32,6 +37,20 @@ export class GdcrsCommand implements TelegramCommand {
    */
   readonly handle = async (ctx: Context, command: string): Promise<void> => {
     try {
+      if (command === 'start gdcrs') {
+        this.stateService.setIsGdcrsRunning(true);
+        await ctx.reply(`✅ 골든크로스 감시 스케줄러가 활성화되었습니다.`);
+        this.logger.log(`골든크로스 감시 시작 명령 수신`);
+        return;
+      }
+
+      if (command === 'stop gdcrs') {
+        this.stateService.setIsGdcrsRunning(false);
+        await ctx.reply(`⏸️ 골든크로스 감시 스케줄러가 중지되었습니다.`);
+        this.logger.log(`골든크로스 감시 중지 명령 수신`);
+        return;
+      }
+
       const argsStr = command.substring(5).trim();
 
       // 1. 인자가 없는 경우 도움말 및 현재 상태 출력
@@ -117,7 +136,15 @@ export class GdcrsCommand implements TelegramCommand {
         return;
       }
 
-      // 4. 'remove {번호}' 파싱
+      // 4. 'remove all' 또는 'remove {번호}' 파싱
+      if (argsStr.toLowerCase() === 'remove all') {
+        const count = this.stateService.removeAllGdcrsStocks();
+        await ctx.reply(
+          `✅ 골든크로스 감시 목록의 모든 종목(총 ${count}개)을 삭제했습니다.`,
+        );
+        return;
+      }
+
       const removeMatch = argsStr.match(/^remove\s+(\d+)$/i);
       if (removeMatch) {
         const index = parseInt(removeMatch[1], 10);
@@ -193,25 +220,17 @@ export class GdcrsCommand implements TelegramCommand {
    * @param ctx - 텔레그램 컨텍스트
    */
   private readonly showHelp = async (ctx: Context): Promise<void> => {
-    const shortVal = this.stateService.getGdcrsShort();
-    const longVal = this.stateService.getGdcrsLong();
+    const isRunning = this.stateService.getIsGdcrsRunning();
     const stocksCount = this.stateService.getGdcrsStocks().length;
 
     const message = [
-      `📈 <b>골든크로스 설정 및 감시 목록</b>`,
-      ``,
-      `• 설정된 분봉 값: 단기 ${shortVal} / 장기 ${longVal}`,
+      `📈 <b>[골든크로스 감시 상태]</b>`,
+      `• 상태: ${isRunning ? '✅ 활성화됨' : '⏸️ 중지됨'}`,
       `• 감시 중인 종목 수: ${stocksCount}개`,
       ``,
       `<b>[명령어 사용법]</b>`,
-      `• <code>gdcrs add {종목코드} {금액}</code> - 골든크로스 목록에 종목 추가`,
-      `• <code>gdcrs list</code> - 번호와 함께 목록 조회`,
-      `• <code>gdcrs remove {번호}</code> - 해당 번호의 항목 삭제`,
-      `• <code>gdcrs intv {단기} {장기}</code> - 단기/장기 분봉 값 설정 (1~60)`,
-      ``,
-      `예시:`,
-      `• <code>gdcrs add 005930 60000</code>`,
-      `• <code>gdcrs intv 5 20</code>`,
+      `• <code>start gdcrs</code> - 골든크로스 감시 시작`,
+      `• <code>stop gdcrs</code> - 골든크로스 감시 중단`,
     ].join('\n');
 
     await ctx.reply(message, { parse_mode: 'HTML' });
